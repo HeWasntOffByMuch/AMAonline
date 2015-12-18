@@ -1,0 +1,7 @@
+to install a local instance:
+	->install node.js 'https://nodejs.org/en/'
+	->install mongodb 'https://www.mongodb.org/'
+	->install nodemon with 'npm i nodemon -g'
+	->run db with 'mongod.extension -dbpath PATH-TO-GAME-FOLDER/data'
+	->run server with 'nodemon server.js'
+	->run client with apache. turn on SSL. ignore warnings in browser.

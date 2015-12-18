@@ -1,0 +1,5 @@
+data/
+node_modules/
+csr.pem
+private-key.pem
+public-cert.pem
