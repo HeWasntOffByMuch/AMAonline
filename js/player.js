@@ -25,7 +25,7 @@ module.exports = function Player(gameState, creationDate, lastlogin, time_played
 
 	var moveTime = false;
 	var moving = false;
-
+    var nextMove = false;
 	//All RPG variables
 	var speedBase = speed_base || 400; //for readability, this should represent moving time in ms. figure it out.
 	var speedCur = speed_cur || 400;
@@ -61,9 +61,9 @@ module.exports = function Player(gameState, creationDate, lastlogin, time_played
     }
     this.move = function(dx, dy, sId) {
     	if(!moving && map.isValid(x+dx, y+dy)){
-    		moveTime = gameState.frameTime;
-    		tx += dx;
-    		ty += dy;
+            moveTime = gameState.frameTime;
+            tx += dx;
+            ty += dy;
     		moving = true;
             //chunk tracking
             var cx = Math.floor(tx/gameState.chunkSize.x);
