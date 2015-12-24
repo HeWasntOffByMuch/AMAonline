@@ -39,14 +39,14 @@ module.exports = function Game() {
     	console.log('game saved kinda');
     	io.emit('server-message', {message: 'game saving, hold on to your chunks'});
     	var options = {multi: false};
-    	for(i in playersById){
+    	for(var i in playersById){
 	    	db.updatePlayer({_id: i}, playersById[i].getData(), options, function(err, num_affected) {
 	    		if(err)
-	    			console.log(err)
+	    			console.log(err);
 	    		else{
 	    			numSaved++;
 	    			if(numSaved == gameState.totalPlayers)
-	    				console.log((gameState.totalPlayers/numSaved)*100 + '% players saved. carry on.')
+	    				console.log((gameState.totalPlayers/numSaved)*100 + '% players saved. carry on.');
 	    		}
 	    	});
 		}
@@ -57,7 +57,7 @@ module.exports = function Game() {
     this.exposeIO = function(_io){
     	io = _io; //hopefully gives me access to io outside of top layer.
     	map.exposeIO(_io);
-    }
+    };
     this.authenticateAccount = function(username, password, callback) {
     	// db.findAllPlayers({}, function(err, res) {
     	// 	console.log(res)
@@ -68,13 +68,13 @@ module.exports = function Game() {
             } else if (account) {
                 bcrypt.compare(password, account.password, function(err, res) {
                 	if(err)
-                		return callback(err, res)
+                		return callback(err, res);
                 	else
                     	return callback(err, res);
                 });
             }
             else{
-            	callback(null, null)
+            	callback(null, null);
             }
         });
     };
@@ -89,16 +89,16 @@ module.exports = function Game() {
                 bcrypt.hash(password, null, null, function(err, hash) { //make hash and register account in callback.
                     if (err)
                         console.log(err);
-                    else
+                    else {
                         var a = new Account(db.newObjectId(), username, hash, email, false, creationDate, []);
-                    db.insertNewAccount(a.getData());
+                        db.insertNewAccount(a.getData());
+                    }
                 });
-            	callback(null, true)
+            	callback(null, true);
             }
-    	})
-    	
-    	
-    }
+    	});
+
+    };
     this.accountLogIn = function(socket, username) {
     	playerAccounts[socket] = username;
     };
@@ -124,7 +124,7 @@ module.exports = function Game() {
         				level: p.level,
         				lastLogin: p.lastLogin,
         				timePlayed: p.timePlayed
-        			}
+        			};
         		}
         		callback(null, p_data);
         	}
@@ -138,7 +138,7 @@ module.exports = function Game() {
             		var a = new Account(acc._id, acc.username, acc.password, acc.email, acc.emailValidated, acc.creationDate, acc.playerList);
                 callback(null, a);
             }
-    	})
+    	});
     };
     this.createNewPlayer = function(name, level, acc_user, callback) {
     	db.findAllPlayers({name: name}, function(err, players) {
@@ -150,7 +150,7 @@ module.exports = function Game() {
 			else{ //name available
 				var p = new freshPlayer(gameState, db.newObjectId(), name, acc_user);
 				p.exposeMap(map);
-			    var p = p.getData();
+			    p = p.getData();
 			    db.insertNewPlayer(p); // so he doesnt get lost.
 			    var p_data = {
 			    	id: p._id,
@@ -158,7 +158,7 @@ module.exports = function Game() {
     				level: p.level,
     				timePlayed: p.timePlayed
 
-			    }
+			    };
 				callback(null, p_data);
 			}
 
@@ -180,7 +180,7 @@ module.exports = function Game() {
     	console.log('-----PENDING TOKENS------');
     	console.log(pendingTokens);
     	console.log('-----PLAYER ACCOUNTS------');
-    	for(i in playerAccounts)
+    	for(var i in playerAccounts)
     		console.log(i);
     	console.log('-----PLAYERS ONLINE------');
     	console.log(playersById);
@@ -218,10 +218,10 @@ module.exports = function Game() {
     	var options = {multi: false};
     	db.updatePlayer({_id: id}, player.getData(), options, function(err, num_affected) {
     		if(err){
-    			console.log(err)
+    			console.log(err);
     		}
     		else{
-                map.playerLeaveChunk(sId, player)
+                map.playerLeaveChunk(sId, player);
                 delete playersBySocket[sId];
                 delete playersById[id];
                 gameState.totalPlayers--;
@@ -244,7 +244,7 @@ module.exports = function Game() {
     				playersBySocket[sId] = player;
     				gameState.totalPlayers++;
     				map.playerEnterChunk(sId, player);
-    				console.log('player ' + player_data.name + " has logged in.")
+    				console.log('player ' + player_data.name + " has logged in.");
     				callback(null, player_data); //dont send all the player_data, limit it to unly necessary properties
     			}
     			else{
@@ -284,7 +284,7 @@ module.exports = function Game() {
             var chunks = currentChunk.getNeighbors(); //arr
             var data = {};
             var curChunkPlayers = currentChunk.getPlayersBySocket();//obj
-            
+
             for(var p in curChunkPlayers){
                 data[p] = curChunkPlayers[p].getData();
             }
@@ -299,4 +299,4 @@ module.exports = function Game() {
         }
     }, 1000 / 22);
 
-}
+};

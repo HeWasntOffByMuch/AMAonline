@@ -1,5 +1,19 @@
-var enums = require('./enums.js')
-
+var enums = require('./enums.js');
+var MovementQueue = function(){
+    var currentPath = [];
+    this.getMove = function(){
+        return currentPath.shift();
+    };
+    this.queueMove = function(x, y){
+        currentPath.push([x, y]);
+    };
+    this.getLength = function(){
+        return currentPath.length;
+    };
+    this.clearQueue = function(){
+        currentPath = [];
+    };
+};
 module.exports = function Player(gameState, creationDate, lastlogin, time_played, id, name, level, belongs_to, x, y, speed_base, speed_cur) {
     var map;
     this.exposeMap = function(m) {
@@ -7,22 +21,22 @@ module.exports = function Player(gameState, creationDate, lastlogin, time_played
     };
 
     var _id = id;
-    var name = name;
+    name = name;
     var type = enums.objType.PLAYER;
-    var level = level || 1;
+    level = level || 1;
     var lastLogin = lastlogin || new Date();
-    var creationDate = creationDate || new Date();
+    creationDate = creationDate || new Date();
     var belongsTo = belongs_to;
     var timePlayed = time_played || 0; //only saves if u log out properly.
 
 
     //unsafe defaults
-    var x = x || 32;
-    var y = y || 24;
+    x = x || 32;
+    y = y || 24;
     var tx = x || 32;
     var ty = y || 24;
-    this.currentChunk = {x: Math.floor(x/gameState.chunkSize.x), y: Math.floor(y/gameState.chunkSize.y)}
-
+    this.currentChunk = {x: Math.floor(x/gameState.chunkSize.x), y: Math.floor(y/gameState.chunkSize.y)};
+    var moveQ = new MovementQueue();
 	var moveTime = false;
 	var moving = false;
     var nextMove = false;
@@ -58,27 +72,33 @@ module.exports = function Player(gameState, creationDate, lastlogin, time_played
                 y = ty;
     		}
     	}
-    }
-    this.move = function(dx, dy, sId) {
-    	if(!moving && map.isValid(x+dx, y+dy)){
-            moveTime = gameState.frameTime;
-            tx += dx;
-            ty += dy;
-    		moving = true;
-            //chunk tracking
-            var cx = Math.floor(tx/gameState.chunkSize.x);
-            var cy = Math.floor(ty/gameState.chunkSize.y);
-            if(this.currentChunk.x != cx || this.currentChunk.y != cy){
-                console.log('chunk change')
-                map.playerLeaveChunk(sId, this, this.currentChunk.x, this.currentChunk.y)
-                map.playerEnterChunk(sId, this, cx, cy);
-                this.currentChunk.x = cx;
-                this.currentChunk.y = cy;
+        if(!moving){
+            nextMove = moveQ.getMove();
+            if(nextMove && map.isValid(nextMove[0], nextMove[1])){
+                moveTime = gameState.frameTime;
+                tx += dx;
+                ty += dy;
+                moving = true;
+                //chunk tracking
+                var cx = Math.floor(tx/gameState.chunkSize.x);
+                var cy = Math.floor(ty/gameState.chunkSize.y);
+                if(this.currentChunk.x != cx || this.currentChunk.y != cy){
+                    console.log('chunk change');
+                    map.playerLeaveChunk(sId, this, this.currentChunk.x, this.currentChunk.y);
+                    map.playerEnterChunk(sId, this, cx, cy);
+                    this.currentChunk.x = cx;
+                    this.currentChunk.y = cy;
+                }
             }
-
     	}
-    }
+    };
+    this.move = function(dx, dy, sId) {
+        if(map.isValid(x+dx, y+dy)){
+            moveQ.queueMove(tx  +dx, ty + dy);
+        }
+    	
+    };
     this.addTimePlayed = function(logoutTime) { //invoked on logout
     	timePlayed += logoutTime-lastLogin;
     };
-}
+};

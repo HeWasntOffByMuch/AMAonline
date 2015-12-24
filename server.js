@@ -22,8 +22,8 @@ var server = https.createServer(options, function(req, res) {
 
     if (req.method == 'POST') {
         req.on('data', function(data) {
-            
-            var data = data + '';
+
+            data = data + '';
             data = data.split('&');
             if(data[0].slice(7) == 'login'){
 		        var credentials = {};
@@ -33,20 +33,20 @@ var server = https.createServer(options, function(req, res) {
                 game.authenticateAccount(credentials.username, credentials.password, function(err, response) {
                     if (err) {
                         console.log(err);
-                    } else if (response == true) { //password match
-                        	var token = game.giveToken(credentials.username)
+                    } else if (response === true) { //password match
+                        	var token = game.giveToken(credentials.username);
                             res.writeHead(200, {
                                 'Access-Control-Allow-Origin': '*',
                                 'Content-Type': 'text/html'
                             });
                             res.end(token);
-                    } else if (response == false) { //password doesnt match username
+                    } else if (response === false) { //password doesnt match username
                         res.writeHead(401, {
                             'Access-Control-Allow-Origin': '*',
                             'Content-Type': 'text/html'
                         });
                         res.end();
-                    } else if (response == null) { //no user
+                    } else if (response === null) { //no user
                         res.writeHead(401, {
                             'Access-Control-Allow-Origin': '*',
                             'Content-Type': 'text/html'
@@ -54,14 +54,13 @@ var server = https.createServer(options, function(req, res) {
                         res.end();
                     }
                 });
-            }
-            else if(data[0].slice(7) == 'signup'){
+            } else if(data[0].slice(7) == 'signup') {
             	var credentials = {};
             	credentials.username = data[1].slice(9);
 		        credentials.password = data[2].slice(9);
 		        credentials.password_repeat = data[3].slice(16);
 		        if(credentials.password == credentials.password_repeat){
-		        	game.registerAccount(credentials.username, credentials.password, 'mail@example.com', new Date, function(err, response) {
+		        	game.registerAccount(credentials.username, credentials.password, 'mail@example.com', new Date(), function(err, response) {
 		        		if(err){
 		        			console.log(err);
 		        			res.writeHead(500, {
@@ -70,14 +69,14 @@ var server = https.createServer(options, function(req, res) {
                             });
                             res.end();
 		        		}
-		        		else if(response == false){ // name taken.
+		        		else if(response === false){ // name taken.
                             res.writeHead(202, {
                                 'Access-Control-Allow-Origin': '*',
                                 'Content-Type': 'text/html'
                             });
                             res.end();
 		        		}
-		        		else if(response == true){ //account creation success.
+		        		else if(response === true){ //account creation success.
 		        			res.writeHead(201, {
                                 'Access-Control-Allow-Origin': '*',
                                 'Content-Type': 'text/html'
@@ -96,11 +95,11 @@ var server = https.createServer(options, function(req, res) {
     } else {
         console.log("!POST");
     }
-}).listen(8000);
+}).listen(3000);
 
 
 // ============= SOCKET.IO SETUP ============= //
-var io = require('socket.io')(server); console.log('Socket listening on 8000...'.yellow);
+var io = require('socket.io')(server); console.log('Socket listening on 3000...'.yellow);
 game.exposeIO(io);
 
 
@@ -150,13 +149,13 @@ io.on('connection', function(socket) {
     			else
     				console.log('something went wrong. this is not your player');
     		}
-    	})
+    	});
     });
     socket.on('ping', function(data) {
 
     });
     socket.on('player-input-move', function(data) { //read up on compressing that and lowering overhead
-    	var p = game.getPlayerBySocket(socket.id)
+    	var p = game.getPlayerBySocket(socket.id);
     	if(p)
     		p.move(data.dx, data.dy, socket.id);
     });
@@ -164,11 +163,11 @@ io.on('connection', function(socket) {
 
     });
     socket.on('disconnect', function() {
-    	game.accountLogOut[socket.id];
+    	game.accountLogOut(socket.id);
     	var logoutTime = new Date();
     	game.logOutPlayer(socket.id, logoutTime);
     });
     socket.on('ping', function(data) { //debugging
-        console.log(eval(data))
+        console.log(eval(data));
     });
 });

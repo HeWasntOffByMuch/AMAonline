@@ -1,14 +1,14 @@
 module.exports = function Account(id, username, password, email, email_val, creation_date) {
 	var _id = id;
-    var username = username || null;
-    var password = password || null;
-    var email = email;
+    username = username || null;
+    password = password || null;
+    email = email;
     var emailValidated = email_val || false;
     var creationDate = creation_date;
 
     this.validateEmail = function()	{
     	emailValidated = true;
-    }
+    };
     this.getData = function() {
     	return {
     		_id: _id,
@@ -17,19 +17,19 @@ module.exports = function Account(id, username, password, email, email_val, crea
 			email: email,
 			emailValidated: emailValidated,
 			creationDate: creationDate
-		}
-    }
+		};
+    };
     this.setPassword = function(p) {
-    	if(password == null)
+    	if(password === null)
     		password = p;
     	else
-    		console.log('password has already been set.')
+    		console.log('password has already been set.');
     };
     this.setUsername = function(u) {
-    	if(username == null)
+    	if(username === null)
     		username = u;
     	else
-    		console.log('username has already been set.')
+    		console.log('username has already been set.');
     };
     this.setEmail = function(e) {
     	email = e;

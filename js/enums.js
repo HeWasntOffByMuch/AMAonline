@@ -63,7 +63,7 @@ module.exports = {
     GOLD: 11,
     SKILL: 12
   }
-}
+};
   // if(Object.freeze){
   //   Object.freeze(skillType);
   //   Object.freeze(skillEffect);

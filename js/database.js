@@ -1,10 +1,10 @@
-	var mongoose = require('mongoose')
+	var mongoose = require('mongoose');
 
-	mongoose.connect('mongodb://localhost/');
+	mongoose.connect('mongodb://main_instance:123@ds033285.mongolab.com:33285/amaonline');
 	var db = mongoose.connection;
 	db.on('error', console.error.bind(console, 'connection error:'));
 	db.once('open', function(callback) {
-		console.log('connected to monogDB')
+		console.log('connected to monogDB');
 	});
 	var Schema = mongoose.Schema;
 	var ObjectId = require('mongodb').ObjectID;
@@ -20,7 +20,7 @@
 	    y: Number,
 	    speedBase: Number,
 	    speedCur: Number
-	})
+	});
 	var playerModel = mongoose.model('Player', playerSchema);
 
 	var accountSchema = new Schema({
@@ -29,7 +29,7 @@
 		email: String,
 		emailValidated: Boolean,
 		creationDate: Date
-	})
+	});
 	var accountModel = mongoose.model('Account', accountSchema);
 
 
@@ -47,22 +47,22 @@ module.exports = {
             	console.log('player with id: ' + id + ' hasn\'t been found');
             	callback(null, null);
             }
-        })
+        });
 	},
 	insertNewPlayer: function(data) { //puts a newly created player into the database.
 		var p = new playerModel(data);
 		p.save(function(err) {
-			if (err) console.log(err)
+			if (err) console.log(err);
 			else console.log('player saved');
-		})
+		});
 	},
 	getAccountById: function(id, callback) {
 		accountModel.findById(id, function(err, account) {
             if (err)
-            	callback(err, null)
+            	callback(err, null);
             else
             	callback(null, account);
-        })
+        });
 	},
 	getAccountByUsername: function(username, callback) {
 		accountModel.findOne({
@@ -74,14 +74,14 @@ module.exports = {
         	else{
                	callback(null, account);
         	}
-        })
+        });
 	},
 	insertNewAccount: function(acc) {
 		var a = new accountModel(acc);
 		a.save(function(err) {
-			if (err) console.log(err)
+			if (err) console.log(err);
 			else console.log('account saved');
-		})
+		});
 	},
 	updateAccount: function(conditions, update, options, callback) {
 		accountModel.update(conditions, update, options, function(err) {
@@ -91,24 +91,24 @@ module.exports = {
 	updatePlayer: function(conditions, update, options, callback) {
 		playerModel.update(conditions, update, options, function(err, num_affected) {
 			callback(err, num_affected);
-		})
+		});
 	},
     findAllAccounts: function(query) {
-    	var query = query || {};
+    	query = query || {};
         accountModel.find(query, function(err, res) {
-            console.log(res)
-        })
+            console.log(res);
+        });
     },
     findAllPlayers: function(query, callback) {
-    	var query = query || {};
+    	query = query || {};
     	playerModel.find(query, function(err, res) {
     		callback(err, res);
-    	})
+    	});
     },
     accountCount: function(query) {
-    	var query = query || {};
+    	query = query || {};
     	accountModel.count(query, function(err, res) {
-    		console.log(res)
+    		console.log(res);
     	});
     }
-}
+};
