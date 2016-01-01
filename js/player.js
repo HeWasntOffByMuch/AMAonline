@@ -76,8 +76,8 @@ module.exports = function Player(gameState, creationDate, lastlogin, time_played
             nextMove = moveQ.getMove();
             if(nextMove && map.isValid(nextMove[0], nextMove[1])){
                 moveTime = gameState.frameTime;
-                tx += dx;
-                ty += dy;
+                tx += nextMove[0];
+                ty += nextMove[1];
                 moving = true;
                 //chunk tracking
                 var cx = Math.floor(tx/gameState.chunkSize.x);
@@ -94,7 +94,7 @@ module.exports = function Player(gameState, creationDate, lastlogin, time_played
     };
     this.move = function(dx, dy, sId) {
         if(map.isValid(x+dx, y+dy)){
-            moveQ.queueMove(tx  +dx, ty + dy);
+            moveQ.queueMove(dx, dy);
         }
     	
     };
