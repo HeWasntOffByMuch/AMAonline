@@ -148,7 +148,7 @@ module.exports = function Game() {
 				callback(null, false);
 			}
 			else{ //name available
-				var p = new freshPlayer(gameState, db.newObjectId(), name, acc_user);
+				var p = new freshPlayer(gameState, null, db.newObjectId(), name, acc_user);
 				p.exposeMap(map);
 			    p = p.getData();
 			    db.insertNewPlayer(p); // so he doesnt get lost.
@@ -237,7 +237,7 @@ module.exports = function Game() {
     		else{
     			var username = playerAccounts[sId];
     			if(player_data.belongsTo == username){ //identity theft check, maybe consider watchlist?
-    				var player = new existingPlayer(gameState, player_data);
+    				var player = new existingPlayer(gameState, sId, player_data);
     				player.exposeMap(map);
     				//add the player to the game.
     				playersById[player_data._id] = player;

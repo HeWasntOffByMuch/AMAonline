@@ -1,5 +1,5 @@
 // I wrote it without warmth and without love. Therefore, there is no artistic merit in it.
-
+require('./js/network_settings.js');
 var serverStartTime = new Date().getTime();
 var Game = require('./js/game.js');
 var Player = require('./js/player.js');
@@ -95,13 +95,13 @@ var server = https.createServer(options, function(req, res) {
     } else {
         console.log("!POST");
     }
-}).listen(3000);
+}).listen(port);
 
 
 // ============= SOCKET.IO SETUP ============= //
-var io = require('socket.io')(server); console.log('Socket listening on 3000...'.yellow);
+var io = require('socket.io')(server); console.log("Socket listening on " + port + " ...".yellow);
 game.exposeIO(io);
-
+0
 
 io.on('connection', function(socket) {
 	console.log("someone connected to socket.");
