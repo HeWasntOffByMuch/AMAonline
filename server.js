@@ -1,5 +1,5 @@
 // I wrote it without warmth and without love. Therefore, there is no artistic merit in it.
-require('./js/network_settings.js');
+
 var serverStartTime = new Date().getTime();
 var Game = require('./js/game.js');
 var Player = require('./js/player.js');
@@ -34,12 +34,12 @@ var server = https.createServer(options, function(req, res) {
                     if (err) {
                         console.log(err);
                     } else if (response === true) { //password match
-                    	var token = game.giveToken(credentials.username);
-                        res.writeHead(200, {
-                            'Access-Control-Allow-Origin': '*',
-                            'Content-Type': 'text/html'
-                        });
-                        res.end(token);
+                        	var token = game.giveToken(credentials.username);
+                            res.writeHead(200, {
+                                'Access-Control-Allow-Origin': '*',
+                                'Content-Type': 'text/html'
+                            });
+                            res.end(token);
                     } else if (response === false) { //password doesnt match username
                         res.writeHead(401, {
                             'Access-Control-Allow-Origin': '*',
@@ -95,11 +95,11 @@ var server = https.createServer(options, function(req, res) {
     } else {
         console.log("!POST");
     }
-}).listen(port);
+}).listen(3000);
 
 
 // ============= SOCKET.IO SETUP ============= //
-var io = require('socket.io')(server); console.log('Socket listening on ' + port + '...');
+var io = require('socket.io')(server); console.log('Socket listening on 3000...'.yellow);
 game.exposeIO(io);
 
 
@@ -107,8 +107,6 @@ io.on('connection', function(socket) {
 	console.log("someone connected to socket.");
 	socket.emit('token-request', {});
     socket.on('send-token', function(data) {
-    	console.log('token fro client');
-    	console.log(data)
         game.checkToken(data, function(err, username) {
             if (err) {
                 console.log(err);
