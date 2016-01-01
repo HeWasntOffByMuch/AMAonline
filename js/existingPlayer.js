@@ -1,9 +1,8 @@
 var enums = require('./enums.js');
 var Player = require('./player.js');
-function existingPlayer(gameState, socket_id, data){
+function existingPlayer(gameState, data){
 	Player.call(	this,
 			    	gameState,
-					socket_id,
 			    	data.creationDate,
 			    	new Date(), //lastLogin
 			    	data.timePlayed,

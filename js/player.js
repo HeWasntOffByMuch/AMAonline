@@ -14,14 +14,13 @@ var MovementQueue = function(){
         currentPath = [];
     };
 };
-module.exports = function Player(gameState, socket_id, creationDate, lastlogin, time_played, id, name, level, belongs_to, x, y, speed_base, speed_cur) {
+module.exports = function Player(gameState, creationDate, lastlogin, time_played, id, name, level, belongs_to, x, y, speed_base, speed_cur) {
     var map;
     this.exposeMap = function(m) {
         map = m;
     };
 
     var _id = id;
-    var sId = socket_id || null;
     name = name;
     var type = enums.objType.PLAYER;
     level = level || 1;
@@ -77,8 +76,8 @@ module.exports = function Player(gameState, socket_id, creationDate, lastlogin, 
             nextMove = moveQ.getMove();
             if(nextMove && map.isValid(nextMove[0], nextMove[1])){
                 moveTime = gameState.frameTime;
-                tx = nextMove[0];
-                ty = nextMove[1];
+                tx += dx;
+                ty += dy;
                 moving = true;
                 //chunk tracking
                 var cx = Math.floor(tx/gameState.chunkSize.x);
@@ -93,7 +92,7 @@ module.exports = function Player(gameState, socket_id, creationDate, lastlogin, 
             }
     	}
     };
-    this.move = function(dx, dy) {
+    this.move = function(dx, dy, sId) {
         if(map.isValid(x+dx, y+dy)){
             moveQ.queueMove(tx  +dx, ty + dy);
         }
