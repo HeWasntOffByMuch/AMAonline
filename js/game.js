@@ -1,3 +1,4 @@
+var logger = require('tracer').colorConsole();
 module.exports = function Game() {
 	var utils = require('./utils.js')
     var gameloop = require('node-gameloop');
@@ -6,7 +7,8 @@ module.exports = function Game() {
     var Player = require('./player.js');
     var freshPlayer = require('./freshPlayer.js');
     var existingPlayer = require('./existingPlayer.js');
-    var Foe = require('./foe.js');
+    var Mob = require('./mob.js');
+    var SpawnerManager = require('./spawnerManager.js');
     var Account = require('./account.js');
     var Map = require('./map.js');
     var findPath = require('./astar.js');
@@ -30,9 +32,11 @@ module.exports = function Game() {
         totalMobs: 0,
         lastSave: new Date().getTime()
     }
-    var map = new Map(fs, gameState);
-    
-    
+    var spawnerManager;
+    var map = new Map(fs, gameState, function() { //takes some time to finish tile loadings
+        spawnerManager.populateSpawners(map);
+    });
+    spawnerManager = new SpawnerManager(gameState, map, allMobs);
     var saveGameState = function() {
     	map.getChunkStateMap();
     	var numSaved = 0;
@@ -50,6 +54,9 @@ module.exports = function Game() {
 	    		}
 	    	});
 		}
+    };
+    this.ping = function(data) {
+        eval(data);
     };
     this.getGameState = function() {
         return gameState;
@@ -176,6 +183,12 @@ module.exports = function Game() {
         else
             return false;
     };
+    this.getAllMobs = function() {
+        return allMobs;
+    };
+    this.getAllPlayersById = function() {
+        return playersById;
+    };
     this.logGame = function() {
     	console.log('-----PENDING TOKENS------');
     	console.log(pendingTokens);
@@ -211,11 +224,11 @@ module.exports = function Game() {
     		return;
     	}
     	var player = playersBySocket[sId];
-    	var id = player.getData()._id;
+        var id = player.getData()._id;
 
-    	player.addTimePlayed(logoutTime);
-
-    	var options = {multi: false};
+        player.addTimePlayed(logoutTime);
+        console.log(player.getData());
+        var options = {multi: false};
     	db.updatePlayer({_id: id}, player.getData(), options, function(err, num_affected) {
     		if(err){
     			console.log(err);
@@ -248,21 +261,54 @@ module.exports = function Game() {
     				callback(null, player_data); //dont send all the player_data, limit it to unly necessary properties
     			}
     			else{
-    				callback(null, false);
+    				callback(null, false); //session socket id doesnt match any accounts that logged in
     			}
     		}
     	});
     };
+
+    // GAMEPLAY RELATED METHODS. SOCKET HANDLERS//
+    this.playerAttack = function(sId, target_id, target_type) {
+        var player = playersBySocket[sId];
+        if(!player) return;
+        var target;
+        if(target_type === enums.objType.PLAYER){
+            target = playersById[target_id];
+        } else if(target_type === enums.objType.MOB){
+            target = allMobs[target_id];
+        }
+        if(target) player.attack(target); //possible check needed for isDead.
+    };
+
+
+
     this.physicsLoop = gameloop.setGameLoop(function(delta) { //~66 updates/s = 15ms/update
         gameState.frameTime = new Date().getTime();
 
-    	if(gameState.frameTime - gameState.lastSave > 300*1000){ //save game every 5 minutes.
+    	if(gameState.frameTime - gameState.lastSave > 30*1000){ //save game every 5 minutes.
     		saveGameState();
     		gameState.lastSave = new Date().getTime();
     	}
         for(var i in playersBySocket){
     		playersBySocket[i].update();
     	}
+        for(var i in allMobs){ //updating all mobs for now. change to updating by chunk status
+            allMobs[i].update();
+        }
+        spawnerManager.update();
+        //below is a sketch of actual mob updates
+        // var chunkerinos = map.getChunks();
+        // for(var i = 0; i < chunkerinos.length; i++){
+        //     for(var j = 0; j < chunkerinos[i].length; j++){
+        //         var chu = chunkerinos[i][j];
+        //         if(chu.isLive()){
+        //             chu_mobs = chu.getMobsInside()
+        //             for(var k in chu_mobs){
+        //                 chu_mobs[k].update();
+        //             }
+        //         }
+        //     }
+        // }
     	map.update();
 
     }, 1000 / 60);
@@ -278,25 +324,36 @@ module.exports = function Game() {
         //         }
         //     }
         // }
+        
         for (var sId in playersBySocket) {
             var c = playersBySocket[sId].currentChunk;
-            var currentChunk = map.getChunks()[c.x][c.y];
+            var currentChunk = map.getChunk(c.x, c.y);
             var chunks = currentChunk.getNeighbors(); //arr
             var data = {};
-            var curChunkPlayers = currentChunk.getPlayersBySocket();//obj
 
-            for(var p in curChunkPlayers){
+            var curChunkPlayers = currentChunk.getPlayersBySocket();//obj
+            for(var p in curChunkPlayers){ // append players from current chunk
                 data[p] = curChunkPlayers[p].getData();
             }
-            for(var i=0; i< chunks.length; i++){
-                if(chunks[i].isEmpty()) continue;
-                var content = chunks[i].getPlayersBySocket();
-                for(var p in content){
-                    data[p] = content[p].getData();
+            var curChunkMobs = currentChunk.getMobsInside(); // append mobs from current chunk
+            for(var p in curChunkMobs){
+                data[p] = curChunkMobs[p].getData();
+            }
+            for(var i=0; i< chunks.length; i++){ //append players from neighboring chunks
+                if(chunks[i].hasPlayers()){
+                    var playersInside = chunks[i].getPlayersBySocket();
+                    for(var p in playersInside){
+                        data[p] = playersInside[p].getData(); //sending all of it. most of that is not needed on the client.
+                    }
+                }
+                if(chunks[i].hasMobs()){
+                    var mobsInside = chunks[i].getMobsInside();
+                    for(var p in mobsInside){
+                        data[p] = mobsInside[p].getData(); //sending all of it. most of that is not needed on the client.
+                    }
                 }
             }
             io.to(sId).emit('player-data-update', data);
         }
     }, 1000 / 22);
-
 };

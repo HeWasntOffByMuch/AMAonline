@@ -1,3 +1,4 @@
+var logger = require('tracer').colorConsole();
 function Chunk(x, y, w, h){
 	var x = x;
 	var y = y;
@@ -43,6 +44,9 @@ function Chunk(x, y, w, h){
     this.getPlayersBySocket = function() {
     	return playersBySocket;
     };
+    this.getMobsInside = function() {
+    	return mobsInside;
+    };
     this.getChunkForeground = function() {
     	return chunkForeground;
     };
@@ -54,7 +58,7 @@ function Chunk(x, y, w, h){
     };
     this.areNeighborsEmpty = function() {
     	for(var i in neighboringChunks){
-    		if(!neighboringChunks[i].isEmpty())
+    		if(neighboringChunks[i].hasPlayers())
     			return false;
     	}
     	return true;
@@ -89,19 +93,37 @@ function Chunk(x, y, w, h){
 		else
 			console.log('that player is not there');
 	};
-	this.isEmpty = function() {
+	this.mobEnter = function(mob) {
+		var id = mob.getData()._id
+		if(!mobsInside.hasOwnProperty(id)){
+			mobsInside[id] = mob;
+		}
+	};
+	this.mobLeave = function(mob) {
+		var id = mob.getData()._id;
+		if(mobsInside.hasOwnProperty(id))
+			delete mobsInside[id]
+	};
+	this.hasPlayers = function() {
 		if(Object.keys(playersBySocket).length == 0)
-			return true;
-		else
 			return false;
+		else
+			return true;
+	};
+	this.hasMobs = function() {
+		if(Object.keys(mobsInside).length == 0)
+			return false;
+		else
+			return true;
+
 	};
 	this.update = function() {
 
 	};
 	this.assignChunkTiles = function(source) { //every chunk has tiledata ready to send
-		for(var i=0; i<w; i++){
+		for(var i = 0; i < w; i++){
 			chunkForeground[i] = [];
-			for(var j=0; j<h; j++){
+			for(var j = 0; j < h; j++){
 				chunkForeground[i][j] = source[w*x + i][h*y + j];
 			}
 		}
@@ -151,12 +173,12 @@ function loadTiles(fs, gh, callback) {
     	if(err) callback(err);
     	data = eval("(" + data + ")");
     	var foreground = [];
-    	var count = 0; //non empty tiles
+    	var count = 0; //ground tiles counter
     	for(var i=0; i< data.layers[1].width; i++){
     		foreground[i] = [];
     		for(var j=0; j<data.layers[1].height; j++){
     			foreground[i][j] = data.layers[1].data[i*data.layers[1].width + j];
-    			if(foreground[i][j] != 0)
+    			if(foreground[i][j] != 130)
     				count++;
     		}
     	}
@@ -182,7 +204,7 @@ var io;
 var collisions;
 var foreground;
 
-module.exports = function Map(fs, gameState){
+module.exports = function Map(fs, gameState, collisionLoadingFinished){
     var mapDetails = {
         size: {
             x: gameState.mapSize.x || 96,
@@ -207,6 +229,7 @@ module.exports = function Map(fs, gameState){
     				chunks[i][j].assignChunkCollisions(collisions);
     			}
     		}
+    		collisionLoadingFinished();
     	}
     });
     loadTiles(fs, mapDetails.tileSize, function(err, data, count) {
@@ -215,7 +238,7 @@ module.exports = function Map(fs, gameState){
     	}
     	else{
     		foreground = data;
-    		console.log(count + " map tiles loaded kinda");
+    		console.log(count + " ground tiles loaded kinda");
     		for(var i=0; i<chunks.length; i++){
     			for(var j=0; j<chunks[0].length; j++){
     				chunks[i][j].assignChunkTiles(foreground);
@@ -245,7 +268,7 @@ module.exports = function Map(fs, gameState){
     		for(var j = y-1; j <= y+1; j++){
     			if(i < 0 || j < 0 || i > chunks.length-1 || j > chunks[0].length-1)
     				continue;
-    			if(!chunks[i][j].isEmpty()){
+    			if(chunks[i][j].hasPlayers()){
     				return false;
     			}
     		}
@@ -267,8 +290,8 @@ module.exports = function Map(fs, gameState){
     this.exposeIO = function(_io) {
     	io = _io;
     };
-    this.getChunks = function() {
-    	return chunks;
+    this.getChunk = function(x, y) {
+    	return chunks[x][y];
     }
     this.isValid = function(x, y) {
     	if(collisions[x][y] == 0)
@@ -276,6 +299,12 @@ module.exports = function Map(fs, gameState){
     	else
     		return false;
     }
+    this.occupySpot = function(x, y) {
+        collisions[x][y] = 1;
+    };
+    this.freeSpot = function(x, y) {
+        collisions[x][y] = 0;
+    };
     this.playerEnterChunk = function(sId, player, chunk_x, chunk_y) {
     	var x, y;
     	if(chunk_x == undefined)
@@ -289,7 +318,7 @@ module.exports = function Map(fs, gameState){
 
     	var c = chunks[x][y];
     	var g = c.getNeighbors();
-    	if(!c.isLive() || c.isEmpty()){ // if chunk asleep, wake up the area.
+    	if(!c.isLive() || !c.hasPlayers()){ // if chunk asleep, wake up the area.
     		c.toggleState(true);
     		c.toggleStateMarker(false);
     		for(var i=0; i < g.length; i++){
@@ -309,7 +338,13 @@ module.exports = function Map(fs, gameState){
     		y = Math.floor(player.getData().y/gameState.chunkSize.y)
     	else
     		y = chunk_y;
-    	chunks[x][y].playerLeave(sId, player)
+    	chunks[x][y].playerLeave(sId, player);
+    };
+    this.mobEnterChunk = function(mob, x, y) {
+    	chunks[x][y].mobEnter(mob);
+    };
+    this.mobLeaveChunk = function(mob, x, y) {
+    	chunks[x][y].mobLeave(mob);
     };
     this.update = function() {
     	for (var i = 0; i < chunks.length; i++) {
@@ -329,7 +364,7 @@ module.exports = function Map(fs, gameState){
     				var c = chunks[i][j];
     				if(!c.isLive()) //already off
     					continue;
-    				if(c.isEmpty() && c.areNeighborsEmpty()){ //check neighbors and turn off
+    				if(!c.hasPlayers() && c.areNeighborsEmpty()){ //check neighbors and turn off
     					if(c.isMarked()){
     						c.toggleState(false);
     					}
@@ -352,7 +387,7 @@ module.exports = function Map(fs, gameState){
                         arr[i][j] = '-';
                     }
                     else{
-                    	if(chunks[i][j].isEmpty())
+                    	if(!chunks[i][j].hasPlayers())
                     		arr[i][j] = '0';
                     	else
                         	arr[i][j] = '1';
@@ -362,6 +397,10 @@ module.exports = function Map(fs, gameState){
                     arr[i][j] = 'x';
             }
         }
-        console.log(arr);
+        console.warn('this array is deformed')
+        console.log(arr); //this draws roatated;
+        // for(var i = 0; i < arr[0].length; i++){
+        // 	console.log(arr[0][i], arr[1][i], arr[2][i]);
+        // }
     };
 }
