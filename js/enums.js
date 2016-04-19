@@ -62,6 +62,11 @@ module.exports = {
     BACKPACK: 10,
     GOLD: 11,
     SKILL: 12
+  },
+
+  weaponType: {
+    MELLE: 0,
+    RANGED: 1
   }
 };
   // if(Object.freeze){

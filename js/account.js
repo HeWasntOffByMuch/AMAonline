@@ -1,11 +1,12 @@
-module.exports = function Account(id, username, password, email, email_val, creation_date) {
+module.exports = function Account(id, username, password, email, email_val, creation_date, player_count) {
 	var _id = id;
     username = username || null;
     password = password || null;
     email = email;
     var emailValidated = email_val || false;
     var creationDate = creation_date;
-
+    var playerCount = player_count || 0;
+    var playerCountLimit = 4;
     this.validateEmail = function()	{
     	emailValidated = true;
     };
@@ -16,7 +17,9 @@ module.exports = function Account(id, username, password, email, email_val, crea
 			password: password,
 			email: email,
 			emailValidated: emailValidated,
-			creationDate: creationDate
+			creationDate: creationDate,
+            playerCount: playerCount,
+            playerCountLimit: playerCountLimit
 		};
     };
     this.setPassword = function(p) {
@@ -39,5 +42,11 @@ module.exports = function Account(id, username, password, email, email_val, crea
     };
     this.setId = function(id) { //only do that once to generate _id from mongo. figure out how to generate yoy
     	_id = id;
+    };
+    this.incrementPlayerCount = function() {
+        playerCount++;
+    };
+    this.setPlayerCountLimit = function(limit) {
+        playerCountLimit = limit;
     };
 };

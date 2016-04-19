@@ -1,14 +1,19 @@
-require('./astar.js');
 var logger = require('tracer').colorConsole();
 var enums = require('./enums.js');
-var astar = require('./astar.js');
-module.exports = function Mob(gameState, id, spawn_x, spawn_y, name, experience){
-	console.log('mob created');
-	var map;
-    this.exposeMap = function(m) {
-        map = m;
-        map.occupySpot(tx, ty);
-    };
+var MovementQueue = require('./movement_queue.js');
+var combatTools = require('./combat.js');
+var lootTools = require('./loot.js');
+
+var defaultValues = {
+    accuracyRating: 400,
+    evasionRating: 400,
+    parryRating: 400,
+    blockRating: 400,
+    physicalResistance: 0,
+    mobWeapon: {type: enums.weaponType.MELEE, range: 1.5, damageMin: 1, damageMax: 4}
+};
+module.exports = function Mob(gameState, id, spawn_x, spawn_y, name, experience, health_max, speed_base, possible_loot, mob_weapon){
+	var map = MAP;
     var spawnPoint = {
     	x: spawn_x,
     	y: spawn_y
@@ -20,25 +25,78 @@ module.exports = function Mob(gameState, id, spawn_x, spawn_y, name, experience)
 	var y = spawn_y;
 	var tx = x;
 	var ty = y;
+
+    map.occupySpot(tx, ty);
 	this.currentChunk = {x: Math.floor(x/gameState.chunkSize.x), y: Math.floor(y/gameState.chunkSize.y)};
+
 
 	//moving stuff
 	var passiveMoveInterval = 1500;
-	var speedBase = 600;
+	var speedBase = speed_base ||  600;
 	var speedCur = speedBase;
-	var moveTime = false;
+	var moveTime = gameState.frameTime;
 	var moving = false;
-	var hasAggro = false;
+
+    //aggro stuff
+	var aggressive = true;
+	var aggroRange = 8;
+	var aggroProximity = 1; //how close a unit gets to its target
+	var target = null;
+	var pathfindingPersistence = 300; // cap on nodes visited by A*
+
+	var pathBlocked = false; // findPath returned .timedOut: true
+	var pathBlockedTime = gameState.frameTime; // on findPath.tomeOut start timer
+	var pathBlockedInterval = 1500; // how long to wait until next astar to current target
+	var moveQ = new MovementQueue(pathfindingPersistence);
+
+    //attacking and HP
+    var lastAttack = gameState.frameTime;
+    var attackCooldown = 1000;
+    var attackSpeed = 1;
+
+    // RPG PROPERTIES
+    var accuracyRating = accuracyRating || defaultValues.accuracyRating;
+    var evasionRating = evasionRating || defaultValues.evasionRating;
+    var parryRating = parryRating || defaultValues.parryRating;
+    var blockRating = blockRating || defaultValues.blockRating;
+    var physicalResistance = physicalResistance || defaultValues.physicalResistance;
+    this._ = {
+        accuracyRating: accuracyRating || defaultValues.accuracyRating,
+        evasionRating: evasionRating || defaultValues.evasionRating,
+        parryRating: parryRating || defaultValues.parryRating,
+        blockRating: blockRating || defaultValues.blockRating,
+        physicalResistance: physicalResistance || defaultValues.physicalResistance,
+    };
 
 	//health 
-	this.isDead = false;
-	var healthMax = 50;
-	var healthCur = 50;
+	var isDead = false;
+	var healthMax = health_max || 12;
+	var healthCur = healthMax;
 
 	//exp stuff
 	var experience = experience || 1; // exp dropped on death;
 	var damageInfo = {}; damageInfo.totalDamageTaken = 0;
 
+	var loot = lootTools.rollForLoot(possible_loot) || {}; //possible loot specified in spawnerManager.js
+	var mobWeapon = mob_weapon || defaultValues.mobWeapon;
+	var c = [[]];
+	c[0][0] = mobWeapon;
+	//the 3 lines above might be the biggest shit i've laid in a while. imitates container structure.
+	var equipment = {
+        primary: {contents: c}, // this is nasty, but consistent with player inventory structure
+        secondary: 0,
+        body: 0,
+        legs: 0,
+        boots: 0,
+        head: 0,
+        loot: {}
+    };
+    this.getEquipment = function() {
+    	return equipment;
+    };
+    this.isDead = function() {
+    	return isDead;
+    };
 	this.getData = function() {
 		return {
 			_id: _id,
@@ -51,30 +109,53 @@ module.exports = function Mob(gameState, id, spawn_x, spawn_y, name, experience)
 			speedBase: speedBase,
 			speedCur: speedCur,
 			healthMax: healthMax,
-			healthCur: healthCur
+			healthCur: healthCur,
+			aggroRange: aggroRange,
+			target: target
 		};
 	};
+	this.getCombatData = function() {
+        return {
+            accuracyRating: accuracyRating,
+            evasionRating: evasionRating,
+            parryRating: parryRating,
+            blockRating: blockRating,
+            equipment: equipment
+        }
+    };
+	this.getEquipment = function() {
+		return equipment;
+	};
 	this.update = function(){
+		this.periodicEvent();
+		this.aggroCheck(); // make it run twice a second ?
+		this.moveUpdate();
+		if(target)
+			this.attack();
+	};
+	this.moveUpdate = function() {
 		if(moveTime){
     		if(gameState.frameTime - moveTime > speedCur){ //moving ended. stop unit
-    			//time to stop moving
     			moving = false;
-    			// moveTime = false;
                 x = tx;
                 y = ty;
     		}
     	}
+    	if(pathBlocked){
+    		if(gameState.frameTime - pathBlockedTime > pathBlockedInterval)
+    			pathBlocked = false;
+    	}
     	if(!moving){
-    		if(!hasAggro){
-	    		if(gameState.frameTime - moveTime > passiveMoveInterval){
-	    			this.passiveMove();
-	    		}
-	    	}
-	    	else if(hasAggro){
-	    		if(gameState.frameTime - moveTime > speedCur){
-	    			this.astarMove();
-	    		}
-	    	}
+            if (!target || pathBlocked) {
+                if (gameState.frameTime - moveTime > passiveMoveInterval) {
+                    this.passiveMove();
+                    //maybe look for different target?
+                }
+            }
+            else if (target && combatTools.dist(this.getData(), target.getData()) >= equipment.primary.contents[0][0].range) { //basically dont give mobs ranged weapons until you figure out ranged units walking pattern
+            	target.engageInCombat();
+                this.astarMove();
+            }
 	    	this.chunkCheck();
     	}
 	};
@@ -89,7 +170,58 @@ module.exports = function Mob(gameState, id, spawn_x, spawn_y, name, experience)
         }
 	};
 	this.astarMove = function() {
-
+		// moveQ.findFreeTargetSpot(x, y, target.getData().tx, target.getData().ty);
+		moveQ.findPath(x, y, target.getData().tx, target.getData().ty, equipment.primary.contents[0][0].range);
+		if(moveQ.timedOut){
+			pathBlocked = true;
+			pathBlockedTime = gameState.frameTime;
+		}
+		if(!moveQ.getLength()){ //no valid path
+			target = null;
+			return;
+		}
+		if(Math.max(Math.abs(tx -target.getData().tx), Math.abs(ty - target.getData().ty)) > aggroProximity){ //shd be dist???
+			var nextMove;
+			if(nextMove = moveQ.getMove()){
+				this.move(nextMove[0] - x, nextMove[1] - y);
+			}
+		}
+	};
+	this.aggroCheck = function() {
+        if (!aggressive) return;
+        if (!target) { // look for target
+            var c = map.getChunk(this.currentChunk.x, this.currentChunk.y);
+            var g = c.getNeighbors();
+            c = c.getPlayersById();
+            for (var i in c) {
+                if (this.rangeCheck(c[i])){
+                	target = c[i];
+                	target.engageInCombat();
+                    return;
+                }
+            }
+            for (var i = 0; i < g.length; i++) {
+                var players = g[i].getPlayersById();
+                for (var j in players) {
+                    if (this.rangeCheck(players[j])){
+                    	target = players[j];
+                		target.engageInCombat();
+                        return;
+                    }
+                }
+            }
+        } else {
+            if (target.isDead() || !target.isVisible()) {
+                target = null;
+                return;
+            }
+        }
+	};
+	this.rangeCheck = function(p) {
+		if(!p.isDead() && p.isVisible() && combatTools.dist(this.getData(), p.getData()) < aggroRange && combatTools.calcLineOfSight(this.getData(), p.getData()).isClear){
+			return true;
+		}
+		return false;
 	};
 	this.passiveMove = function() {
 		var rx=0, ry=0;
@@ -110,10 +242,12 @@ module.exports = function Mob(gameState, id, spawn_x, spawn_y, name, experience)
 		}
 	};
 	this.attack = function() {
+		if(gameState.frameTime - lastAttack > attackCooldown/attackSpeed && combatTools.dist(this.getData(), target.getData()) < equipment.primary.contents[0][0].range){
+			lastAttack = gameState.frameTime;
 
-	};
-	this.aggroCheck = function() {
-
+			var damage = combatTools.calcMobDamage(this, target);
+			var damageDealt = target.takeDamage(this, damage);
+		}
 	};
 	this.dropExperience = function(killer) {
 		var allPlayers = GAME.getAllPlayersById();
@@ -127,7 +261,14 @@ module.exports = function Mob(gameState, id, spawn_x, spawn_y, name, experience)
 		}
 	};
 	this.takeDamage = function(attacker, damage) { // handle dying and aggro
-		var damageTaken = Math.min(damage, healthCur);
+		if(!target){
+			target = attacker;
+		} else {
+			if(Math.random() < 0.05){ // 5% chance that mob switches on taking damage
+				target = attacker;
+			}
+		}
+		var damageTaken = Math.floor(Math.min(damage, healthCur));
 		healthCur -= damageTaken;
 
 		var attackerId = attacker.getData()._id;
@@ -135,17 +276,32 @@ module.exports = function Mob(gameState, id, spawn_x, spawn_y, name, experience)
 	    damageInfo[attackerId] += damageTaken;
 	    damageInfo.totalDamageTaken += damageTaken;
 
-		if(healthCur <= 0)
+		if(healthCur <= 0 && !isDead)
 			this.die(attacker);
+		return damageTaken;
+	};
+	this.getHealed = function(val) {
+		healthCur += Math.min(val, healthMax - healthCur);
+	};
+	this.periodicEvent = function() { //custom event for mobs
+
 	};
 	this.die = function(killer) {
-		var am = GAME.getAllMobs(); //kinda nasty walkaround
+		var am = GAME.getAllMobs(); //glabal var walkaround
 		delete am[_id];
 		map.mobLeaveChunk(this, this.currentChunk.x, this.currentChunk.y);
-		this.isDead = true;
+		isDead = true;
+		target = null;
 		this.dropExperience(killer);
-		map.freeSpot(tx, ty)
+		map.freeSpot(tx, ty);
+		ENTMAN.createCorpse(tx, ty, name + 'Dead', loot, 60000);
 		IO.emit('mob-death', {id: _id});
 	};
+    this.heal = function(val) {
+        healthCur += Math.min(val, healthMax - healthCur);
+    };
+    this.resurrect = function() {
+    	//cant resurrect a mob
+    };
 }
 

@@ -1,4 +1,32 @@
-module.exports = function (world, pathStart, pathEnd)
+module.exports = function MovementQueue(nodesVisitedCap) {
+  this.currentPath = [];
+  this.timedOut = false;
+  this.findFreeTargetSpot = function(x, y, x_dest, y_dest) {
+  	//closest spot
+  	var final_x = Math.sign(x - x_dest);
+  	var final_y = Math.sign(y - y_dest);
+  	//if taken - get second best
+  };
+  this.findPath = function(x, y, x_dest, y_dest, attackRange){
+  	this.timedOut = false;
+  	var result = findPath(MAP.getCollisions(), [x, y], [x_dest, y_dest], attackRange, nodesVisitedCap)
+    this.currentPath = result.path;
+    this.timedOut = result.timedOut;
+    this.currentPath.shift();
+  }
+  this.queueMove = function(x, y){
+    this.currentPath = [[x, y]];
+  }
+  this.getLength = function(){
+    return this.currentPath.length;
+  }
+  this.getMove = function(){
+    return this.currentPath.shift();
+  }
+}
+
+
+function findPath(world, pathStart, pathEnd, attackRange, nodesVisitedCap)
 {
 	// shortcuts for speed
 	var	abs = Math.abs;
@@ -20,10 +48,15 @@ module.exports = function (world, pathStart, pathEnd)
 	var worldHeight = world[0].length;
 	var worldSize =	worldWidth * worldHeight;
 
+	var dist = function(a, b) {
+		return Math.sqrt((a.x-b.x)*(a.x-b.x)+(a.y-b.y)*(a.y-b.y));
+	};
 	//heurystyka
 	// default: no diagonals (Manhattan)
 	var distanceFunction = EuclideanDistance;
 	var findNeighbours = function(){}; // empty
+	// var findNeighbours = Neighbours; // empty
+	// var findNeighbours = DiagonalNeighboursFree;
 	// var findNeighbours = DiagonalNeighbours;
 
 	// distanceFunction functions
@@ -174,6 +207,8 @@ module.exports = function (world, pathStart, pathEnd)
 		var myPath;
 		// temp integer variables used in the calculations
 		var length, max, min, i, j;
+		// for possible timeout applications
+		var nodesVisited = 0;
 		// iterate through the open list until none are left
 		while(length = Open.length)
 		{
@@ -190,7 +225,8 @@ module.exports = function (world, pathStart, pathEnd)
 			// grab the next node and remove it from Open array
 			myNode = Open.splice(min, 1)[0];
 			// is it the destination node?
-			if(myNode.value === mypathEnd.value)
+			// if(myNode.value === mypathEnd.value) // original destination check
+			if(dist(myNode, mypathEnd) < attackRange)
 			{
 				myPath = Closed[Closed.push(myNode) - 1];
 				do
@@ -198,7 +234,7 @@ module.exports = function (world, pathStart, pathEnd)
 					result.push([myPath.x, myPath.y]);
 				}
 				while (myPath = myPath.Parent);
-				// clear the working arrays
+				// clear the working arrays and end the loop
 				AStar = Closed = Open = [];
 				// we want to return start to finish
 				result.reverse();
@@ -221,13 +257,16 @@ module.exports = function (world, pathStart, pathEnd)
 						Open.push(myPath);
 						// mark this node in the world graph as visited
 						AStar[myPath.value] = true;
+						if(nodesVisited++ > nodesVisitedCap){
+							return {path: result, timedOut: true};;
+						}
 					}
 				}
 				// remember this route as having no more untested options
 				Closed.push(myNode);
 			}
 		} // keep iterating until the Open list is empty
-		return result;
+		return {path: result, timedOut: false};
 	}
 
 	return calculatePath();

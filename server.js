@@ -10,10 +10,11 @@ var colors = require('colors');
 // ============= SOCKET.IO SETUP ============= //
 var io = IO = require('socket.io')(port); console.log("Socket listening on " + port + " ...".yellow);
 game.exposeIO(io);
-0
+
+// io.set('transports', [ 'websocket' ]);
 
 io.on('connection', function(socket) {
-	// console.log("someone connected to socket.");
+	console.log("someone connected to socket.");
 	// socket.emit('token-request', {});
  //    socket.on('send-token', function(data) {
  //        game.checkToken(data, function(err, username) {
@@ -31,21 +32,18 @@ io.on('connection', function(socket) {
  //    });
     socket.on('login-info', function(data) {
         console.log(data);
-        game.authenticateAccount(data.user, data.pass, function(err, response) {
+        game.authenticateAccount(data.user, data.pass, function(err, response, acc_data) {
             if (err) {
                 console.log(err);
-                socket.disconnect();
             } else if (response === true) { //password match
-                game.accountLogIn(socket.id, data.user);
+                game.accountLogIn(socket.id, acc_data);
                 game.getAccountOverview(data.user, function(err, p_data) { //here's where you send playerdata/overview
                      socket.emit('login-success', p_data);
                 });
             } else if (response === false) { //password doesnt match username
                 socket.emit('login-failed', {});
-                socket.disconnect();
             } else if (response === null) { //no user
                 socket.emit('login-failed', {});
-                socket.disconnect();
             }
         });
     })
@@ -56,12 +54,11 @@ io.on('connection', function(socket) {
         if(password != password_repeat){ //checked client side as well
             console.log('someones messing with the client');
             socket.emit('sign-up-error', {});
-            socket.disconnect();
             return;
         }
 
 
-        game.registerAccount(username, password, 'mail@example.com', new Date(), function(err, response) {
+        game.registerAccount(username, password, 'mail@example.com', function(err, response) {
             if(err){
                 console.log(err);
             }
@@ -71,21 +68,26 @@ io.on('connection', function(socket) {
             else if(response === true){ //account creation success.
                 socket.emit('sign-up-success', {});
             }
-            socket.disconnect();
         }); //check if unique
     });
     socket.on('create-player', function(data) {
-    	var belongsTo = game.getAccountBySocket(socket.id);
-    	if(!belongsTo) return; //no user assigned to that socket
-    	game.createNewPlayer(data.name, 1, belongsTo, function(err, res) {
+        if( data.name && data.name.length > 12){
+            socket.emit('player-name-too-long', {});
+            return;
+        }
+    	game.createNewPlayer(data.name, 1, socket.id, function(err, player_data, option) {
     		if(err){
     			console.log(err);
     		}
-    		else if(!res){ //name taken
-    			socket.emit('player-name-taken', {});
-    		}
-    		else{ //name good. player created
-				socket.emit('player-created', res);
+            if(player_data){ //name good. player created
+                socket.emit('player-created', player_data);
+            }
+    		else if(!player_data){ //name taken
+                if(option == 'taken')
+                    socket.emit('player-name-taken', {});
+                else if(option == 'overcapacity'){
+                    socket.emit('player-count-exceeded', {});
+                }
     		}
     	});
     });
@@ -118,12 +120,96 @@ io.on('connection', function(socket) {
     socket.on('player-attack', function(data) { // data = {id: id, type: 0/1}
     	game.playerAttack(socket.id, data.id, data.type);
     });
-    socket.on('request-map-world', function() {
+    socket.on('player-inventory-change', function() {
 
     });
+    socket.on('player-respawn-request', function() {
+        var player = game.getPlayerBySocket(socket.id);
+        if(player && player.isDead()){
+            player.respawn();
+        }
+    });
+    socket.on('player-logout-request', function() {
+        socket.emit('player-logout-response', {});
+        var logoutTime = new Date();
+        game.logOutPlayer(socket.id, logoutTime);
+        game.accountLogOut(socket.id);
+    });
     socket.on('disconnect', function() {
-    	game.accountLogOut(socket.id);
-    	var logoutTime = new Date();
-    	game.logOutPlayer(socket.id, logoutTime);
+        var logoutTime = new Date();
+        game.logOutPlayer(socket.id, logoutTime);
+        game.accountLogOut(socket.id);
+    });
+    socket.on('player-moved-item', function(data) {
+        // console.log(data)
+        var player = game.getPlayerBySocket(socket.id);
+        if(player && !player.isDead()){
+            player.moveInventoryItem(data.from, data.to);
+        }
+    });
+    socket.on('player-use-item-on-self', function(data) {
+        var player = game.getPlayerBySocket(socket.id);
+        if(player && !player.isDead()){
+            player.useItemOnSelf(data);
+        }
+    });
+    socket.on('player-use-item-on-target', function(data) {
+        var player = game.getPlayerBySocket(socket.id);
+        if(player){
+            player.useItemOnTarget(data);
+        }
+    });
+    socket.on('player-skill-request', function(data) {
+        var player = game.getPlayerBySocket(socket.id);
+        if(player && !player.isDead()){
+            player.spendSkillRequest(data);
+        }
+    });
+    socket.on('player-call-request', function(data) {
+        console.log(data);
+        var playerCalling = game.getPlayerBySocket(socket.id);
+        var playerBeingCalled = game.getPlayerById(data.playerCalled).getSocketId();
+        if(playerCalling && playerBeingCalled){
+            io.to(playerBeingCalled).emit('player-call-incoming', {callerId: playerCalling.getData()._id ,callerName: playerCalling.getData().name, peerId: data.peerId})
+        }
+    });
+    socket.on('player-call-refuse', function(callerId) {
+        var socketToNotify = game.getPlayerById(callerId).getSocketId(); //if a player logged this will obviously fail
+        var playerRefusingId = game.getPlayerBySocket(socket.id).getData()._id;
+        io.to(socketToNotify).emit('player-call-refuse', playerRefusingId)
+    });
+    socket.on('player-call-accept', function(callerId) {
+        var socketToNotify = game.getPlayerById(callerId).getSocketId(); //if a player logged this will obviously fail
+        var playerAcceptingId = game.getPlayerBySocket(socket.id).getData()._id;
+        io.to(socketToNotify).emit('player-call-accept', playerAcceptingId)
+    });
+    // 2 below are for looting items
+    socket.on('entity-content-request', function(entity_id) {
+        game.entityContentRequest(socket.id, entity_id);
+    });
+    socket.on('player-loot-entity', function(data) {
+        var player = game.getPlayerBySocket(socket.id);
+        if(player && !player.isDead()){
+            player.lootEntity(data.from, data.to);
+        }
+    });
+    // handing container items
+    socket.on('container-take-request', function(data) {
+        var player = game.getPlayerBySocket(socket.id);
+        if(player && !player.isDead()){
+            player.takeItemFromContainer(data.from, data.to);
+        }
+    });
+    socket.on('container-put-request', function(data) {
+        var player = game.getPlayerBySocket(socket.id);
+        if(player && !player.isDead()){
+            player.putItemIntoContainer(data.from, data.to);
+        }
+    });
+    socket.on('container-move-inside-request', function(data) {
+        var player = game.getPlayerBySocket(socket.id);
+        if(player && !player.isDead()){
+            player.moveItemInsideContainer(data.from, data.to);
+        }
     });
 });

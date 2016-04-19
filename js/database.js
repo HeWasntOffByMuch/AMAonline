@@ -12,14 +12,39 @@
 	    name: String,
 	    type: Number,
 	    level: Number,
+	    experience: Number,
+	    healthCur: Number,
+	    healthMax: Number,
+	    manaCur: Number,
+	    manaMax: Number,
 	    lastLogin: Date,
 	    creationDate: Date,
 	    belongsTo: String,
 	    timePlayed: Number,
+	    deathHistory: Array,
 	    x: Number,
 	    y: Number,
 	    speedBase: Number,
-	    speedCur: Number
+	    speedCur: Number,
+	    equipment: {
+	    	primary: Object,
+	    	secondary: Object,
+	    	body: Object,
+            legs: Object,
+            boots: Object,
+            head: Object,
+            backpack: Object,
+            skill0: Object,
+            skill1: Object,
+            skill2: Object,
+            skill3: Object
+
+	    },
+	    accuracyRating: Number,
+        evasionRating: Number,
+        parryRating: Number,
+        blockRating: Number,
+        skillTree: Object
 	});
 	var playerModel = mongoose.model('Player', playerSchema);
 
@@ -28,7 +53,9 @@
 		password: String,
 		email: String,
 		emailValidated: Boolean,
-		creationDate: Date
+		creationDate: Date,
+		playerCount: Number,
+		playerCountLimit: Number
 	});
 	var accountModel = mongoose.model('Account', accountSchema);
 
@@ -84,12 +111,12 @@ module.exports = {
 		});
 	},
 	updateAccount: function(conditions, update, options, callback) {
-		accountModel.update(conditions, update, options, function(err) {
-			callback(err);
+		accountModel.update(conditions, {$set: update}, options, function(err, num_affected) {
+			callback(err, num_affected);
 		});
 	},
 	updatePlayer: function(conditions, update, options, callback) {
-		playerModel.update(conditions, update, options, function(err, num_affected) {
+		playerModel.update(conditions, {$set: update}, options, function(err, num_affected) {
 			callback(err, num_affected);
 		});
 	},

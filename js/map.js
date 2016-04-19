@@ -7,6 +7,7 @@ function Chunk(x, y, w, h){
 	var playersBySocket = {}; //players by socket.id
 	var playersById = {}; //those are socket ids
 	var mobsInside = {};
+    var entitiesInside = {};
 	var neighboringChunks; // -CPU +memory // typeof array
 	var chunkForeground = [];
 	var chunkCollisions = [];
@@ -47,6 +48,9 @@ function Chunk(x, y, w, h){
     this.getMobsInside = function() {
     	return mobsInside;
     };
+    this.getEntitiesInside = function() {
+        return entitiesInside;
+    };
     this.getChunkForeground = function() {
     	return chunkForeground;
     };
@@ -63,32 +67,65 @@ function Chunk(x, y, w, h){
     	}
     	return true;
     };
-    this.getNeighbors = function() {
+    this.getNeighbors = function() { //return type array
     	return neighboringChunks;
     };
+    this.getNearbyPlayers = function() {
+        var players = {};
+        for(var sId in playersBySocket){
+            players[sId] = playersBySocket[sId];
+        }
+        var chunks = this.getNeighbors();
+        for(var i = 0; i < chunks.length; i++){
+            var playersInside = chunks[i].getPlayersBySocket();
+            for(var sId in playersInside){
+                players[sId] = playersInside[sId];
+            }
+        }
+        return players;
+    };
+    this.getNearbyMobs = function() {
+        var mobs = {};
+        for(var id in mobsInside){
+            mobs[id] = mobsInside[id];
+        }
+        var chunks = this.getNeighbors();
+        for(var i = 0; i < chunks.length; i++){
+            var mobsInNeighbor = chunks[i].getMobsInside();
+            for(var id in mobsInNeighbor){
+                mobs[id] = mobsInNeighbor[id];
+            }
+        }
+        return mobs;
+    };
 	this.playerEnter = function(sId, player) {
-			// console.log(playersBySocket);
 		if(!playersBySocket.hasOwnProperty(sId)){
 			playersBySocket[sId] = player;
-			playersById[player.getData()._id] = sId;
-			console.log('player enters chunk', x, y, 'with neighbors count:', this.getNeighbors().length);
+			playersById[player.getData()._id] = player;
 			var map_data = {};
 			map_data.tiles = [];
-			map_data.tiles.push({pos: {x: x, y: y}, tile_data: chunkForeground, col_data: chunkCollisions});
+			map_data.tiles.push({pos: {x: x, y: y}, tile_data: chunkForeground, col_data: chunkCollisions, entity_data: entitiesInside});
 			for(var i=0; i<neighboringChunks.length; i++){
-				map_data.tiles.push({pos: neighboringChunks[i].getPosition(), tile_data: neighboringChunks[i].getChunkForeground(), col_data: neighboringChunks[i].getChunkCollisions()})
+				map_data.tiles.push({pos: neighboringChunks[i].getPosition(), tile_data: neighboringChunks[i].getChunkForeground(), col_data: neighboringChunks[i].getChunkCollisions(), entity_data: neighboringChunks[i].getEntitiesInside()})
 			}
 			io.to(sId).emit('map-update', map_data);
 		}
 		else
 			console.log('player already there');
 	};
+    this.forceSendingChunkData = function(sId, player) {
+        var map_data = {};
+            map_data.tiles = [];
+            map_data.tiles.push({pos: {x: x, y: y}, tile_data: chunkForeground, col_data: chunkCollisions, entity_data: entitiesInside});
+            for(var i=0; i<neighboringChunks.length; i++){
+                map_data.tiles.push({pos: neighboringChunks[i].getPosition(), tile_data: neighboringChunks[i].getChunkForeground(), col_data: neighboringChunks[i].getChunkCollisions(), entity_data: neighboringChunks[i].getEntitiesInside()})
+            }
+            io.to(sId).emit('map-update', map_data);
+    };
 	this.playerLeave = function(sId, player) {
-			// console.log(playersBySocket);
 		if(playersBySocket.hasOwnProperty(sId)){
 			delete playersBySocket[sId];
 			delete playersById[player.getData()._id];
-			console.log('player leaves chunk');
 		}
 		else
 			console.log('that player is not there');
@@ -104,6 +141,22 @@ function Chunk(x, y, w, h){
 		if(mobsInside.hasOwnProperty(id))
 			delete mobsInside[id]
 	};
+    this.addEntity = function(id, entity) {
+        entitiesInside[id] = entity;
+        var playersToNotify = this.getNearbyPlayers();
+        for(var sId in playersToNotify){
+            io.to(sId).emit('map-entity-added', {id: id, entity: entity});
+        }
+        // get nearby players
+        // make new entity broadcast
+    };
+    this.removeEntity = function(id) {
+        delete entitiesInside[id];
+        var playersToNotify = this.getNearbyPlayers();
+        for(var sId in playersToNotify){
+            io.to(sId).emit('map-entity-removed', {id: id});
+        }
+    };
 	this.hasPlayers = function() {
 		if(Object.keys(playersBySocket).length == 0)
 			return false;
@@ -117,6 +170,13 @@ function Chunk(x, y, w, h){
 			return true;
 
 	};
+    this.hasEntities = function() {
+        if(Object.keys(entitiesInside).length == 0)
+            return false;
+        else
+            return true;
+
+    };
 	this.update = function() {
 
 	};
@@ -124,7 +184,7 @@ function Chunk(x, y, w, h){
 		for(var i = 0; i < w; i++){
 			chunkForeground[i] = [];
 			for(var j = 0; j < h; j++){
-				chunkForeground[i][j] = source[w*x + i][h*y + j];
+				chunkForeground[i][j] = source[h*y + j][w*x + i];
 			}
 		}
 	};
@@ -151,13 +211,26 @@ function loadCollisions(fs, mapDetails, callback) {
     fs.readFile('map/map.json', 'utf-8', function(err, data) {
         if (err) callback(err, null);
         data = eval("(" + data + ")");
-    	data = data.layers[4];
+    	var data1 = data.layers[4]; // those u can shoot over. 0.5 value
         var x, y, h, w, i, j, count=0;
-        for (var o in data.objects) {
-            h = Math.round(data.objects[o].height / gh);
-            w = Math.round(data.objects[o].width / gh);
-            x = Math.round(data.objects[o].x / gh);
-            y = Math.round(data.objects[o].y / gh);
+        for (var o in data1.objects) {
+            h = Math.round(data1.objects[o].height / gh);
+            w = Math.round(data1.objects[o].width / gh);
+            x = Math.round(data1.objects[o].x / gh);
+            y = Math.round(data1.objects[o].y / gh);
+            for (i = x; i < (x + w); i++) {
+                for (j = y; j < (y + h); j++) {
+                    collisions[i][j] = 0.5;
+                    count++
+                }
+            }
+        }
+        var data2 = data.layers[5]; //those you can not shoot over. val = 1;
+        for (var o in data2.objects) {
+            h = Math.round(data2.objects[o].height / gh);
+            w = Math.round(data2.objects[o].width / gh);
+            x = Math.round(data2.objects[o].x / gh);
+            y = Math.round(data2.objects[o].y / gh);
             for (i = x; i < (x + w); i++) {
                 for (j = y; j < (y + h); j++) {
                     collisions[i][j] = 1;
@@ -166,6 +239,24 @@ function loadCollisions(fs, mapDetails, callback) {
             }
         }
         callback(null, collisions, count);
+    });
+}
+function loadSpawners(fs, gh, callback) {
+    var spawners = [];
+    var count = 0;
+
+    fs.readFile('map/map.json', 'utf-8', function(err, data) {
+        if (err) callback(err, null);
+        data = eval("(" + data + ")");
+        data = data.layers[6]; // layer with mobs
+        var x, y, h, w, i, j, count=0;
+        for (var o in data.objects) {
+            x = Math.round(data.objects[o].x / gh);
+            y = Math.round(data.objects[o].y / gh);
+            spawners.push({x: x, y: y, name: data.objects[o].name, respawnTime: data.objects[o].type});
+            count++;
+        }
+        callback(null, spawners, count);
     });
 }
 function loadTiles(fs, gh, callback) {
@@ -186,17 +277,22 @@ function loadTiles(fs, gh, callback) {
     });
 }
 function generateChunks(map_size, chunk_size, callback){
+    console.time('chunks_loading_time');
 	var gridWidth = Math.floor(map_size.x/chunk_size.x);
 	var gridHeight = Math.floor(map_size.y/chunk_size.y);
-	console.log('chunks', gridWidth, 'by',gridHeight);
+	console.log('initiating', gridWidth * gridHeight, 'chunks in ', gridWidth, 'by', gridHeight, 'grid...');
+    process.stdout.write('[ ')
 	var chunks = [], count=0;
 	for(var i=0; i<gridWidth; i++){
 		chunks[i] = [];
+        process.stdout.write('|')
 		for(var j=0; j<gridHeight; j++){
 			chunks[i][j] = new Chunk(i, j, chunk_size.x, chunk_size.y);
 			count++
 		}
 	}
+    process.stdout.write(' ] \n');
+    console.timeEnd('chunks_loading_time');
 	callback(count, chunks);
 }
 
@@ -204,7 +300,7 @@ var io;
 var collisions;
 var foreground;
 
-module.exports = function Map(fs, gameState, collisionLoadingFinished){
+module.exports = function Map(fs, gameState, spawnerLoadingFinished){
     var mapDetails = {
         size: {
             x: gameState.mapSize.x || 96,
@@ -216,6 +312,7 @@ module.exports = function Map(fs, gameState, collisionLoadingFinished){
         lastChunkCheck: new Date().getTime()
     }
     var chunks = false;
+    var spawners;
     loadCollisions(fs, mapDetails, function(err, data, count) {
     	if(err){
     		console.log('collision loading failed.')
@@ -223,13 +320,12 @@ module.exports = function Map(fs, gameState, collisionLoadingFinished){
     	else{
     		collisions = data;
     		// collisions.shift(); //somehow first element is shit, or is it?
-    		console.log(count + " map collisions loaded kinda");
+    		console.log(count + " map collisions loaded");
     		for(var i=0; i<chunks.length; i++){
     			for(var j=0; j<chunks[0].length; j++){
     				chunks[i][j].assignChunkCollisions(collisions);
     			}
     		}
-    		collisionLoadingFinished();
     	}
     });
     loadTiles(fs, mapDetails.tileSize, function(err, data, count) {
@@ -238,13 +334,23 @@ module.exports = function Map(fs, gameState, collisionLoadingFinished){
     	}
     	else{
     		foreground = data;
-    		console.log(count + " ground tiles loaded kinda");
+    		console.log(count + " ground tiles loaded");
     		for(var i=0; i<chunks.length; i++){
     			for(var j=0; j<chunks[0].length; j++){
     				chunks[i][j].assignChunkTiles(foreground);
     			}
     		}
     	}
+    });
+    loadSpawners(fs, mapDetails.tileSize, function(err, data, count) {
+        if(err) {
+            console.log(err)
+        }
+        else{
+            spawners = data;
+            console.log(count + " spawners loaded");
+            spawnerLoadingFinished();
+        }
     });
 
     
@@ -284,7 +390,7 @@ module.exports = function Map(fs, gameState, collisionLoadingFinished){
 			}
 		}
 		mapDetails.liveChunks += count;
-		console.log(count + ' chunks initiated kinda');
+		console.log(count + ' chunks initiated');
     });
     
     this.exposeIO = function(_io) {
@@ -293,17 +399,30 @@ module.exports = function Map(fs, gameState, collisionLoadingFinished){
     this.getChunk = function(x, y) {
     	return chunks[x][y];
     }
+    this.getSpawners = function() {
+        return spawners;
+    };
     this.isValid = function(x, y) {
-    	if(collisions[x][y] == 0)
+    	if(collisions[x][y] < 0.5)
     		return true;
     	else
     		return false;
     }
+    this.isShotValid = function(x, y) { //used in calcLineOfSight
+        if(collisions[x][y] < 1)
+            return true;
+        else
+            return false;
+            
+    };
     this.occupySpot = function(x, y) {
-        collisions[x][y] = 1;
+        collisions[x][y] = 0.5;
     };
     this.freeSpot = function(x, y) {
         collisions[x][y] = 0;
+    };
+    this.getCollisions = function() {
+        return collisions;
     };
     this.playerEnterChunk = function(sId, player, chunk_x, chunk_y) {
     	var x, y;
@@ -374,7 +493,7 @@ module.exports = function Map(fs, gameState, collisionLoadingFinished){
     				}
     			}
     		}
-    		console.timeEnd('chunk ops: ');
+    		// console.timeEnd('chunk ops: ');
     	}
     };
     this.getChunkStateMap = function() {

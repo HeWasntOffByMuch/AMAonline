@@ -1,8 +1,10 @@
 var logger = require('tracer').colorConsole();
 var enums = require('./enums.js');
 var Container = require('./container.js');
-var combatTools = require('./combat.js')
+var combatTools = require('./combat.js');
 var expTools = require('./exp.js');
+var Inventory = require('./inventory.js');
+var SkillTree = require('./skill_tree.js');
 var MovementQueue = function(){
     var currentPath = [];
     this.getMove = function(){
@@ -17,15 +19,28 @@ var MovementQueue = function(){
     this.clearQueue = function(){
         currentPath = [];
     };
-};
-module.exports = function Player(gameState, socket_id, creationDate, lastlogin, time_played, id, name, level, belongs_to, spawn_x, spawn_y, speed_base, speed_cur, health_cur, health_max, level, experience) {
-    var map;
-    this.exposeMap = function(m) {
-        map = m;
-        map.occupySpot(tx, ty);
+    this.getQueue = function(){
+        return currentPath;
     };
+};
+var defaultValues = {
+    accuracyRating: 400,
+    evasionRating: 400,
+    parryRating: 400,
+    blockRating: 400,
+    speedBase: 600,
+    speedBonusPerLevel: 4,
+    maxHealthPerLevel: 10,
+    maxManaPerLevel: 5,
+    healthMax: 90,
+    manaMax: 5
+};
+module.exports = function Player(gameState, socket_id, creationDate, lastlogin, time_played, id, name, level, belongs_to, spawn_x, spawn_y, speed_base, speed_cur, health_cur, health_max, mana_cur, mana_max, level, experience, _equipment, skill_tree, accuracyRating, evasionRating, parryRating, blockRating) {
+    var map = MAP;
     var _id = id;
     var sId = socket_id || null;
+    this.setNewSocketId = function(new_sid) { sId = new_sid };
+    this.getSocketId = function() { return sId };
     name = name;
     var type = enums.objType.PLAYER;
     level = level || 1;
@@ -34,42 +49,705 @@ module.exports = function Player(gameState, socket_id, creationDate, lastlogin, 
     var belongsTo = belongs_to;
     var timePlayed = time_played || 0; //only saves if u log out properly.
 
-
     //unsafe defaults
-    var x = spawn_x || 32;
-    var y = spawn_y || 24;
-    var tx = x || 32;
-    var ty = y || 24;
+    var x = spawn_x || gameState.globalSpawnPoint.x;
+    var y = spawn_y || gameState.globalSpawnPoint.y;
+    var tx = x;
+    var ty = y;
+
+    map.occupySpot(tx, ty);
     this.currentChunk = {x: Math.floor(x/gameState.chunkSize.x), y: Math.floor(y/gameState.chunkSize.y)};
+
     var moveQ = new MovementQueue();
+    var skillTree = new SkillTree(skill_tree);
 	var moveTime = false;
 	var moving = false;
     var nextMove = false;
-	//All RPG variables
-	var speedBase = speed_base || 200; //for readability, this should represent moving time in ms. figure it out.
-	var speedCur = speed_cur || 200;
 
     //attacking and HP
     var isDead = false;
-    var healthMax = health_max || 100;
-    var healthCur = health_cur || healthMax;
+    var isVisible = true;
+    var timeOfDeath;
+    var deathHistory = [];
+
+
+    var inCombat = false; //is currently engaged in combat
+    var lastCombatEngagement = gameState.frameTime; // last time combat was triggered
+    var combatEngagementInterval = 30 * 1000; // the time it takes to remove combat status
+
     var lastAttack = gameState.frameTime;
-    var attackCooldown = 400;
     var attackSpeed = 1;
 
-    //levels and EXP
+    // these are in case client validation passes and server validation fails
+    // due to clock differences and possible latency
+    var prematureAttackRequestFromClient = false;
+    var prematureAttackTarget = null;
+    // levels and EXP
     var level = level || 1;
     var experience = experience || 0;
-    var equipment = {
-        primary: {type: 'sword', range: 1.5, damageMin: 15, damageMax: 30},
-        secondary: 0,
-        body: 0,
-        legs: 0,
-        boots: 0,
-        head: 0,
-        backpack: new Container()
+
+
+    // RPG PROPERTIES
+    var strength = strength || 10;
+    var agility = agility || 10;
+    var intelligence = intelligence || 10;
+
+    var speedBase = defaultValues.speedBase - level * defaultValues.speedBonusPerLevel;
+    var speedCur = speedBase;
+    
+    var healthMax = defaultValues.healthMax;
+    var healthCur = health_cur || healthMax;
+
+    var passiveRegenValue = 2;
+    var passiveRegenInterval = 6000;
+    var passiveRegenTime = gameState.frameTime;
+
+    var manaMax = defaultValues.manaMax;
+    var manaCur = mana_cur || manaMax;
+    
+
+    this._ = {
+        healthMax: defaultValues.healthMax + level * defaultValues.maxHealthPerLevel + skillTree.getSkillLevel('physique', 'healthPool') * 10,
+        manaMax: defaultValues.manaMax + level * defaultValues.maxManaPerLevel + skillTree.getSkillLevel('intelligence', 'manaPool') * 10,
+        accuracyRating: defaultValues.accuracyRating + skillTree.getSkillLevel('agility', 'accuracy') * 30,
+        evasionRating: defaultValues.evasionRating + skillTree.getSkillLevel('agility', 'evasion') * 30,
+        parryRating: defaultValues.parryRating + skillTree.getSkillLevel('agility', 'parry') * 30,
+        blockRating: defaultValues.blockRating + skillTree.getSkillLevel('strength', 'blocking') * 30,
+        physicalResistance: 0,
+        // dev note: max crit chance from skillTree alone is 25%
+        critChance: skillTree.getSkillLevel('agility', 'criticalHits') * 0.0125,
+        // dev note: max is 2 and on hit is multiplied
+        critDamage: 1 + skillTree.getSkillLevel('agility', 'criticalHits') * 0.05,
+        // dev note: max is 2 and on hit is multiplied
+        damageMod: 1 + skillTree.getSkillLevel('strength', 'attackDamage') * 0.05,
+        // dev note: max 2 from skills alone
+        attackSpeed: 1 + skillTree.getSkillLevel('agility', 'attackSpeed') * 0.05,
+        // in [ms]
+        speedCur: speedBase,
+        // dev note: max 3 from skills alone
+        healingMagic: 1 + skillTree.getSkillLevel('intelligence', 'healingMagic') * 0.1,
+        lifeSteal: 0,
+        offensiveInstant: 1 + skillTree.getSkillLevel('intelligence', 'offensiveInstant') * 0.1
+    }
+
+    var equipment;
+    
+    if(_equipment){
+        equipment = {
+            primary:    new Container(_equipment.primary.id, 1, 1, _equipment.primary.contents, 'primary'),
+            secondary:  new Container(_equipment.secondary.id, 1, 1, _equipment.secondary.contents, 'secondary'),
+            body:       new Container(_equipment.body.id, 1, 1, _equipment.body.contents, 'body'),
+            legs:       new Container(_equipment.legs.id, 1, 1, _equipment.legs.contents, 'body'),
+            boots:      new Container(_equipment.boots.id, 1, 1, _equipment.boots.contents, 'boots'),
+            head:       new Container(_equipment.head.id, 1, 1, _equipment.head.contents, 'head'),
+            backpack:   new Container(_equipment.backpack.id, _equipment.backpack.w, _equipment.backpack.h, _equipment.backpack.contents, 'backpack'),
+            skill0:     new Container(_equipment.skill0.id, 1, 1, _equipment.skill0.contents, 'skill0'),
+            skill1:     new Container(_equipment.skill1.id, 1, 1, _equipment.skill1.contents, 'skill1'),
+            skill2:     new Container(_equipment.skill2.id, 1, 1, _equipment.skill2.contents, 'skill2'),
+            skill3:     new Container(_equipment.skill3.id, 1, 1, _equipment.skill3.contents, 'skill3')
+        };
+    }
+    else{   // IF NEW CHARACTER
+        equipment = {
+            primary:    new Container(null, 1, 1, null, 'primary'),
+            secondary:  new Container(null, 1, 1, null, 'secondary'),
+            body:       new Container(null, 1, 1, null, 'body'),
+            legs:       new Container(null, 1, 1, null, 'legs'),
+            boots:      new Container(null, 1, 1, null, 'boots'),
+            head:       new Container(null, 1, 1, null, 'head'),
+            backpack:   new Container(null, 4, 5, null, 'backpack'),
+            skill0:     new Container(null, 1, 1, null, 'skill0'),
+            skill1:     new Container(null, 1, 1, null, 'skill1'),
+            skill2:     new Container(null, 1, 1, null, 'skill2'),
+            skill3:     new Container(null, 1, 1, null, 'skill3')
+        };
+        // SET UP STARTING ITEMS:
+        equipment.backpack.contents[0][0] = IFAC.createWeapon(1);
+        equipment.backpack.contents[1][0] = IFAC.createItem(1);
+        equipment.backpack.contents[2][0] = IFAC.createItem(3);
+        equipment.backpack.contents[3][0] = IFAC.createWeapon(2);
+    }
+    this.isDead = function() {
+        return isDead;
     };
-    this.getData = function(value) { //this is also all the stuff that gets saved into and pulled from db
+    this.isVisible = function() {
+        return  isVisible;
+    };
+    this.getEquipment = function() {
+        return equipment;
+    };
+    this.setWeapon = function(item) {
+        equipment.primary = item;
+    };
+    this.update = function() {
+        this.prematureAttackCompensation(); // hopefully this is inlined by the optimizer
+    	this.moveUpdate();
+        this.combatCheck();
+        this.passiveRegen();
+        if(isDead && gameState.frameTime - timeOfDeath > gameState.globalRespawnTime){
+            this.respawn();
+        }
+    };
+    this.moveUpdate = function() {
+        if(moveTime){
+            if(gameState.frameTime - moveTime > this._.speedCur){
+                //time to stop moving
+                moving = false;
+                moveTime = false;
+                x = tx;
+                y = ty;
+            }
+        }
+        if(!moving){
+            nextMove = moveQ.getMove();
+            if(nextMove && map.isValid(x + nextMove[0], y + nextMove[1])){
+                this.move(nextMove[0], nextMove[1]);
+                this.chunkCheck();
+            }
+            else if(nextMove){
+                //i really wanna clear the queue at this point and snap the player back
+                IO.to(sId).emit('move-queue-invalid', {x: tx, y: ty});
+                moveQ.clearQueue();
+            }
+        }
+    };
+    this.chunkCheck = function() {
+        var cx = Math.floor(tx/gameState.chunkSize.x);
+            var cy = Math.floor(ty/gameState.chunkSize.y);
+            if(this.currentChunk.x != cx || this.currentChunk.y != cy){
+                // console.log('chunk change');
+                map.playerLeaveChunk(sId, this, this.currentChunk.x, this.currentChunk.y);
+                map.playerEnterChunk(sId, this, cx, cy);
+                this.currentChunk.x = cx;
+                this.currentChunk.y = cy;
+            }
+    };
+    this.queueMove = function(dx, dy) {
+        dx = Math.sign(dx);
+        dy = Math.sign(dy);
+        if((!Math.abs(dx) && Math.abs(dy)) || (Math.abs(dx) && !Math.abs(dy)) ){ // XOR
+            moveQ.queueMove(dx, dy);
+        } else {
+            console.log('some monkey business on client side.')
+        }
+    };
+    this.move = function(dx, dy) {
+        moveTime = gameState.frameTime;
+        map.freeSpot(tx, ty);
+        tx = x + dx;
+        ty = y + dy;
+        map.occupySpot(tx, ty);
+        moving = true;
+    };
+    this.setPosition = function(spawn_x, spawn_y) { //for respawn and teleports and what not
+        x = spawn_x;
+        y = spawn_y;
+        tx = spawn_x;
+        ty = spawn_y;
+        this.chunkCheck(); //force chunk check - otherwise 'onmove'
+    };
+    this.isSurrounded = function() {
+        for(var i = tx - 1; i <= tx + 1; i++){
+            for(var j = ty - 1; j <= ty + 1; j++){
+                if(i == tx && j == ty) continue;
+                if(map.isValid(i, j))
+                    return false;
+            }
+        }
+        return true;
+    };
+    this.engageInCombat = function() {
+        if(!inCombat){
+            IO.to(sId).emit('player-combat-start', {});
+        }
+        inCombat = true;
+        lastCombatEngagement = gameState.frameTime;
+    };
+    this.combatCheck = function() {
+        if(inCombat && gameState.frameTime - lastCombatEngagement > combatEngagementInterval){
+            inCombat = false;
+            IO.to(sId).emit('player-combat-end', {});
+        }
+    };
+    this.inCombat = function() {
+        return inCombat;
+    };
+    this.prematureAttackCompensation = function() {
+        if(prematureAttackRequestFromClient && gameState.frameTime - lastAttack > equipment.primary.contents[0][0].attackCooldown / this._.attackSpeed){
+            prematureAttackRequestFromClient = false;
+            this.attackRequest(prematureAttackTarget);
+            prematureAttackTarget = null;
+        }
+    };
+    this.attackRequest = function(target) {
+        if(!isDead && equipment.primary){
+            if(gameState.frameTime - lastAttack > equipment.primary.contents[0][0].attackCooldown / this._.attackSpeed && combatTools.dist(this.getData(), target.getData()) < equipment.primary.contents[0][0].range){
+                lastAttack = gameState.frameTime;
+                this.attack(target);
+            }
+            else {
+                prematureAttackRequestFromClient = true;
+                prematureAttackTarget = target;
+                // console.log('attack missfired by:', gameState.frameTime - lastAttack - equipment.primary.contents[0][0].attackCooldown/attackSpeed)
+            }
+        }
+    };
+    this.attack = function(target) {
+        if(this === target) {
+            console.log('player attempts to attack himself.');
+            return;
+        }
+        var nearbyPlayers = MAP.getChunk(this.currentChunk.x, this.currentChunk.y).getNearbyPlayers();
+        if(equipment.primary.contents[0][0].type == 'ranged'){
+            // do ranged stuff and possibly return here i fline of sight is broken
+            var los = combatTools.calcLineOfSight(this.getData(), target.getData());
+            for(var socketid in nearbyPlayers){
+                IO.to(socketid).emit('player-attack-range', {id: _id, target: {x: los.obstacle.x, y: los.obstacle.y}, hit: los.isClear});
+            }
+            if(!los.isClear)
+                return;
+        }
+        else if(equipment.primary.contents[0][0].type == 'melee'){
+            for(var socketid in nearbyPlayers){
+                IO.to(socketid).emit('player-attack-melee', {id: _id, target: {x: target.getData().tx, y: target.getData().ty}});
+            }
+        }
+        this.engageInCombat();
+        var damage = combatTools.calcPlayerDamage(this, target);
+        var damageDealt = target.takeDamage(this, damage); //this is for further use in lifesteal etc
+        var damageStolen = Math.floor(damageDealt * this._.lifeSteal);
+        this.healSelf(damageStolen);
+    };
+    this.emitSpellEffect = function(options) {
+        var nearbyPlayers = MAP.getChunk(this.currentChunk.x, this.currentChunk.y).getNearbyPlayers();
+        for(var socketid in nearbyPlayers){
+            IO.to(socketid).emit('spell-effect-triggered', options);
+        }
+    };
+    this.aoeAttack = function(areaFunction, damage, options) {
+        var unitsAffected = {};
+        var currentChunk = MAP.getChunk(this.currentChunk.x, this.currentChunk.y);
+        var nearbyPlayers = currentChunk.getNearbyPlayers();
+        var nearbyMobs = currentChunk.getNearbyMobs();
+        // depending on AoE come up with resulting affected units
+        var mobsHit = this.checkMobsAgainstAreaOfEffect(nearbyMobs, areaFunction);
+        for(var i in mobsHit){
+            mobsHit[i].takeDamage(this, damage);
+        }
+        var playersHit = this.checkPlayersAgainstAreaOfEffect(nearbyPlayers, areaFunction);
+        for(var i in playersHit){
+            playersHit[i].takeDamage(this, damage)
+        }
+
+        this.emitSpellEffect(options);
+    };
+    this.checkPlayersAgainstAreaOfEffect = function(nearbyPlayers, areaFunction) {
+        var affectedPlayers = areaFunction(nearbyPlayers);
+        delete affectedPlayers[sId];// dont wanna hit yourself
+        return affectedPlayers;
+    };
+    this.checkMobsAgainstAreaOfEffect = function(nearbyMobs, areaFunction) {
+        var affectedMobs = areaFunction(nearbyMobs);
+        return affectedMobs;
+    };
+    this.fireball = function(damage, target) {
+        damage = damage * this._.offensiveInstant;
+        if(target && !damage.isNan){
+            target.takeDamage(this, damage)
+
+            var options = {
+                name: 'fireball',
+                x: tx,
+                y: ty,
+                tx: target.getData().tx,
+                ty: target.getData().ty
+            };
+            this.emitSpellEffect(options);
+        }
+    };
+    this.strongProjectile = function(damage, target) {
+        if(target && !damage.isNan){
+            target.takeDamage(this, damage)
+
+            var options = {
+                name: 'strongProjectile',
+                x: tx,
+                y: ty,
+                tx: target.getData().tx,
+                ty: target.getData().ty
+            };
+            this.emitSpellEffect(options);
+        }
+    };
+    this.groundSmash = function(damage) {
+        var areaFunction = function(units) { //attacks units around player
+            var affectedUnits = {};
+            for(var id in units){
+                var u = units[id].getData();
+                if(Math.abs(u.tx - tx) <= 1 && Math.abs(u.ty - ty) <= 1)
+                    affectedUnits[id] = units[id];
+            }
+            return affectedUnits;
+        };
+        var options = {
+            name: 'groundSmash',
+            x: tx,
+            y: ty
+        };
+        this.aoeAttack(areaFunction, damage, options);
+    };
+    this.magicWave = function(damage) {
+        var areaFunction = function(units) { //attacks units around player
+            var range = 5;
+            var affectedUnits = {};
+            for(var id in units){
+                var u = units[id].getData();
+                if((u.tx === tx && Math.abs(u.ty - ty) <= range) || (u.ty === ty && Math.abs(u.tx - tx) <= range))
+                    affectedUnits[id] = units[id];
+            }
+            return affectedUnits;
+        };
+
+        var options = {
+            name: 'magicWave',
+            x: tx,
+            y: ty
+        };
+        this.aoeAttack(areaFunction, damage, options);
+    };
+    this.takeDamage = function(attacker, damage) { //only damage from autoattacks. for different -> define more functions
+        if(!isDead){
+            var damageTaken = Math.floor(Math.min(damage, healthCur));
+            healthCur -= damageTaken;
+            this.engageInCombat();
+            if(healthCur <= 0)
+                this.die(attacker);
+            return damageTaken;
+        }
+    };
+    this.passiveRegen = function() {
+        if(!isDead && gameState.frameTime - passiveRegenTime > passiveRegenInterval){
+            passiveRegenTime = gameState.frameTime;
+             healthCur += Math.min(passiveRegenValue, this._.healthMax - healthCur);
+        }
+    };
+    this.checkMana = function(val) {
+        if(manaCur >= val)
+            return true;
+        else
+            return false;
+    };
+    this.useMana = function(val) {
+        manaCur -= Math.min(manaCur, val); //ca't go below 0
+    };
+    this.restoreMana = function(val, target) {
+        manaCur += Math.min(val, this._.manaMax - manaCur);
+    };
+    this.checkItemRange = function(item, target) {
+        if(!item.range || combatTools.dist(this.getData(), target.getData()) <= item.range){
+            return true;
+        } else {
+            return false;
+        }
+    };
+    // THOSE ARE USABLE SKILL/ITEM FUNCTIONS
+    this.giveMana = function(val, target) {
+        if(target){
+            target.restoreMana(val);
+        }
+        else{
+            this.restoreMana(val);
+        }
+    };
+    this.heal = function(val, target) { //heal self or target
+        var healAmount = Math.floor(val * this._.healingMagic);
+
+        if(target){
+            target.getHealed(healAmount);
+            var options = {
+                name: 'healUnit',
+                x: target.getData().tx,
+                y: target.getData().ty
+            };
+        }
+        else{
+            this.healSelf(healAmount);
+            var options = {
+                name: 'healUnit',
+                x: tx,
+                y: ty
+            };
+        }
+        this.emitSpellEffect(options)
+    };
+    this.healSelf = function(val) {
+        healthCur += Math.min(val, this._.healthMax - healthCur);
+    };
+    this.getHealed = function(val) { // won't trigger self  healing cooldowns
+        healthCur += Math.min(val, this._.healthMax - healthCur);
+    };
+    this.resurrect = function(percent, target) { //cannot use on yourself
+        if(target && target.isDead()){
+            target.getResurrected(percent);
+        }
+        else{
+
+        }
+    };
+    this.getResurrected = function(percent) {
+        healthCur = this._.healthMax * percent;
+        isDead = false;
+        this.setPosition(tx, ty);
+        IO.to(sId).emit('player-respawn-response', {x: x, y: y});
+        logger.log('player ' + name + ' ressed at ', x, y);
+    };
+    this.quickSlashes = function(value, target) { // client sends target.id along with request
+        if(target){
+            this.attack(target);
+            setTimeout(this.attack.bind(this, target), 300);
+        }
+        else{
+
+        }
+    };
+    this.toggleInvisibility = function(equipping) {
+        if(equipping){
+            isVisible = false;
+            IO.to(sId).emit('you-toggled-invisibility', {isVisible: isVisible});
+            var nearbyPlayers = MAP.getChunk(this.currentChunk.x, this.currentChunk.y).getNearbyPlayers();
+            for(var socketid in nearbyPlayers){
+                IO.to(socketid).emit('other-player-toggled-invisibility', {id: _id});
+            }
+        }
+        else{
+            // need canTurnVisible check if no other sources of invis are active
+            isVisible = true;
+            IO.to(sId).emit('you-toggled-invisibility', {isVisible: isVisible});
+        }
+    };
+    this.digGround = function() {
+        console.log('digging')
+        //would want the target too be diggable entity
+    }
+    this.die = function(killer) {
+        isDead = true;
+        inCombat = false;
+        timeOfDeath = new Date().getTime();
+        map.freeSpot(tx, ty);
+        deathHistory.push({killedBy: killer.getData().name, date: new Date().getTime()})
+        IO.to(sId).emit('you-have-died', {});
+        var nearbyPlayers = MAP.getChunk(this.currentChunk.x, this.currentChunk.y).getNearbyPlayers();
+        for(var socketid in nearbyPlayers){
+            IO.to(socketid).emit('other-player-died', {id: _id});
+        }
+        var loot = {};
+        ENTMAN.createCorpse(tx, ty, 'Grave', loot, 60000);
+        //lose xp?
+        //health to 100%
+
+    };
+    this.gainExperience = function(gained_exp) {
+        experience += gained_exp;
+        IO.to(sId).emit('player-gained-exp', gained_exp);
+        while(experience >= expTools.getLevelExp(level + 1)){
+            this.levelUp();
+            IO.to(sId).emit('player-level-up', level);
+        }
+    };
+    this.levelUp = function() {
+        level++;
+        this._.speedCur -= defaultValues.speedBonusPerLevel;
+        
+        skillTree.addSkillPoint();
+        
+        logger.log('LEVEL UP ! player xp=', experience, "level=", level);
+    };
+    this.respawn = function() {
+        healthCur = this._.healthMax;
+        isDead = false;
+        this.setPosition(gameState.globalSpawnPoint.x, gameState.globalSpawnPoint.y);
+        // map.occupySpot(tx, ty);// -- most likely needed 
+        IO.to(sId).emit('player-respawn-response', {x: x, y: y});
+        logger.log('player ' + name + ' respawned at ', x, y);
+    };
+    this.addTimePlayed = function(logoutTime) { //invoked on logout
+    	timePlayed += logoutTime-lastLogin;
+    };
+    this.useItemOnSelf = function(from) { //rewrite needed for this - item property checks
+        console.log('player using item')
+        var item = equipment[from.id].contents[from.x][from.y];
+        if(item){
+            if(item.useFunction){ // this is not a definitive no go for using items - redesign? use hasOwnProperty?
+                this.removeUsesFromConsumable(from, item);
+                if(item.manaCost){
+                    if(this.checkMana(item.manaCost))
+                        this.useMana(item.manaCost)
+                    else
+                        return;
+                }
+                if(!item.useValue)
+                    this[item.useFunction]();
+                else
+                    this[item.useFunction](item.useValue);
+            }
+        }
+    };
+    this.removeItem = function() {
+        //break up useItemOnSelf().
+    };
+    this.useItemOnTarget = function(data) { //need distance checks and item needs range property
+        console.log('player using item on target');
+        var usedOn;
+        var item = equipment[data.id].contents[data.x][data.y];
+        if(data.targetType === enums.objType.PLAYER)
+            usedOn = GAME.getAllPlayersById()[data.targetId];
+        else if(data.targetType === enums.objType.MOB)
+            usedOn = GAME.getAllMobs()[data.targetId];
+        if(item && usedOn && item.useFunction){
+            if(!this.checkItemRange(item, usedOn))
+                return;
+            if(item.manaCost){
+                if(this.checkMana(item.manaCost))
+                    this.useMana(item.manaCost)
+                else
+                    return;
+            }
+            this.removeUsesFromConsumable(data, item);
+            if(!item.useValue)
+                this[item.useFunction](null, usedOn)
+            else
+                this[item.useFunction](item.useValue, usedOn);
+
+        }
+    };
+    this.removeUsesFromConsumable = function(from, item) {
+        if(item.type == 'consumable' && --item.usesLeft <= 0){
+            IO.to(sId).emit('player-used-item', {parentId: from.id, id: item.id}); //add uses left and handle on client
+            equipment[from.id].contents[from.x][from.y] = 0; // removes item
+        }
+    };
+    this.removeItem = function(item, from) {
+        // misleading name. think about changing it.
+        //this is just technical function that handles moving items with respect to equip bonuses
+        if(equipment[from.id].name != 'backpack' && item.onEquip){
+            for(var i = 0; i < item.onEquip.length; i++){
+                this.applyEquipmentBonusesOnItemTakeOff(item.onEquip[i]);
+            }
+        }
+        equipment[from.id].removeItem(from.x, from.y);
+    };
+    this.addItem = function(item, to) {
+        // misleading name. think about changing it
+        //this is just technical function that handles moving items with respect to equip bonuses
+        if(equipment[to.id].name != 'backpack' && item.onEquip){
+            for(var i = 0; i < item.onEquip.length; i++){
+                this.applyEquipmentBonusesOnItemEquip(item.onEquip[i]);
+            }
+        }
+        equipment[to.id].addItem(item, to.x, to.y);
+    };
+    this.moveInventoryItem = function(from, to) { // retarded but works for now. this is a request but handles all item moving?
+        var item = equipment[from.id].contents[from.x][from.y];
+        if(!equipment[to.id].isSlotEmpty(to.x, to.y) || item == equipment[to.id].contents[to.x][to.y]) // move item into self
+            return;
+
+        this.addItem(item, to);
+        this.removeItem(item, from);
+    };
+    this.takeItemFromContainer = function(from, to) {
+        var item = ENTMAN.getEntity(from.id).contents[from.x][from.y];
+
+        if(!item) return; //possibly send client message because obviously something went wrong
+
+        ENTMAN.getEntity(from.id).contents[from.x][from.y] = 0; // clear previous position
+
+        this.addItem(item, to);
+    };
+    this.putItemIntoContainer = function(from, to) {
+        var item = equipment[from.id].contents[from.x][from.y];
+        console.log(item)
+        if(item == ENTMAN.getEntity(to.id).contents[to.x][to.y]) // move item into self
+            return;
+
+        if(!ENTMAN.getEntity(to.id).contents[to.x][to.y]){
+            this.removeItem(item, from);
+            ENTMAN.getEntity(to.id).contents[to.x][to.y] = item;
+        }
+    };
+    this.moveItemInsideContainer = function(from, to) {
+        var item = ENTMAN.getEntity(from.id).contents[from.x][from.y];
+
+        if(!item) return; //possibly send client message because obviously something went wrong
+
+        ENTMAN.getEntity(from.id).contents[from.x][from.y] = 0; // clear previous position
+        ENTMAN.getEntity(to.id).contents[to.x][to.y] = item;
+    };
+    this.lootEntity = function(from, to) { //missing feedback?? also for other clients
+        var item = ENTMAN.getEntity(from.id).contents[from.pos];
+
+        if(!item) return;
+
+        if(equipment[to.id].isSlotEmpty(to.x, to.y)){
+            delete ENTMAN.getEntity(from.id).contents[from.pos]; // modifies entity.
+            equipment[to.id].addItem(item, to.x, to.y);
+        }
+        else{
+            // obviously need client correction when this happens
+        }
+        //let other clients nearby know item is no longer there!!
+    };
+    this.applyEquipmentBonusesOnItemEquip = function(data) {
+        if(data.type === 'function'){
+            this[data.name](true);
+        }
+        else{
+            this._[data.name] += data.value;
+        }
+    };
+    this.applyEquipmentBonusesOnItemTakeOff = function(data) {
+        if(data.type === 'function'){
+            this[data.name](false);
+        }
+        else{
+            this._[data.name] -= data.value;
+        }
+    };
+    this.applyEquipmentBonusesOnLogin = function(){
+        for(var i in equipment){
+            var item = equipment[i].contents[0][0];
+            if(i != 'backpack' && item.onEquip){
+                for(var j = 0; j < item.onEquip.length; j++){
+                    this.applyEquipmentBonusesOnItemEquip(item.onEquip[j]);
+                }
+            }
+        }
+    };
+    //immediately call that method while constructing player
+    this.applyEquipmentBonusesOnLogin();
+
+    this.spendSkillRequest = function(skill_data) {
+        if(skillTree.canSpendSkillPoint(skill_data.branch, skill_data.name)){
+            skillTree.spendSkillPoint(skill_data.branch, skill_data.name);
+
+            // do some sort of update on that one. might have to update all _ stats
+            var relevantStats = skillTree.getAssociatedStats(skill_data.branch, skill_data.name);
+            this.updateStatsWhenSkillPointIsUsed(relevantStats);
+
+
+            var level = skillTree.getSkillLevel(skill_data.branch, skill_data.name);
+            IO.to(sId).emit('player-skill-response', {branch: skill_data.branch, name: skill_data.name, level: level });
+        }
+        else {
+            // console.log('cant increase skill', skill_data.name)
+        }
+    };
+    this.updateStatsWhenSkillPointIsUsed = function(stats) {
+        for(var name in stats){
+            console.log(name, 'incremented by', stats[name])
+            this._[name] += stats[name];
+        }
+    };
+    this.getData = function() { //this is also all the stuff that gets saved into and pulled from db
         return {
             _id: _id,
             name: name,
@@ -84,90 +762,80 @@ module.exports = function Player(gameState, socket_id, creationDate, lastlogin, 
             tx: tx,
             ty: ty,
             speedBase: speedBase,
-            speedCur: speedCur,
+            speedCur: this._.speedCur,
             healthCur: healthCur,
-            healthMax: healthMax,
+            healthMax: this._.healthMax,
+            manaCur: manaCur,
+            manaMax: this._.manaMax,
+            isDead: isDead,
+            isVisible: isVisible,
+            deathHistory: deathHistory,
             level: level,
-            experience: experience
+            experience: experience,
+            equipment: {
+                primary: equipment.primary,
+                secondary: equipment.secondary,
+                body: equipment.body,
+                legs: equipment.legs,
+                boots: equipment.boots,
+                head: equipment.head,
+                backpack: equipment.backpack,
+                skill0: equipment.skill0,
+                skill1: equipment.skill1,
+                skill2: equipment.skill2,
+                skill3: equipment.skill3
+            },
+            skillTree : skillTree.getDataForDatabase(),
+            attackSpeed: this._.attackSpeed
         };
     };
-    this.getEquipment = function() {
+    this.getDataForClientInitiation = function() {
+        return{
+            _id: _id,
+            name: name,
+            level: level,
+            type: type,
+            x: x,
+            y: y,
+            tx: tx,
+            ty: ty,
+            isVisible: isVisible,
+            speedCur: this._.speedCur,
+            healthCur: healthCur,
+            healthMax: this._.healthMax,
+            manaCur: manaCur,
+            manaMax: this._.manaMax,
+            level: level,
+            experience: experience,
+            equipment: {
+                primary: equipment.primary,
+                secondary: equipment.secondary,
+                body: equipment.body,
+                legs: equipment.legs,
+                boots: equipment.boots,
+                head: equipment.head,
+                backpack: equipment.backpack,
+                skill0: equipment.skill0,
+                skill1: equipment.skill1,
+                skill2: equipment.skill2,
+                skill3: equipment.skill3
+            },
+            attackSpeed: this._.attackSpeed,
+            inCombat: inCombat,
+            skillTree: skillTree.getDataForClient()
+        }
+    };
+    this.getCombatData = function() {
+        return {
+            accuracyRating: accuracyRating,
+            evasionRating: evasionRating,
+            parryRating: parryRating,
+            blockRating: blockRating,
+            equipment: equipment,
+            skillTree: skillTree
+        }
+    };
+    this.getEquipment  = function() {
         return equipment;
-    };
-    this.update = function() {
-    	if(moveTime){
-    		if(gameState.frameTime - moveTime > speedCur){
-    			//time to stop moving
-    			moving = false;
-    			moveTime = false;
-                x = tx;
-                y = ty;
-    		}
-    	}
-        if(!moving){
-            nextMove = moveQ.getMove();
-            if(nextMove && map.isValid(nextMove[0], nextMove[1])){
-                this.move(nextMove[0], nextMove[1]);
-                //chunk tracking. maybe consider moving this to a separate function.
-                var cx = Math.floor(tx/gameState.chunkSize.x);
-                var cy = Math.floor(ty/gameState.chunkSize.y);
-                if(this.currentChunk.x != cx || this.currentChunk.y != cy){
-                    console.log('chunk change');
-                    map.playerLeaveChunk(sId, this, this.currentChunk.x, this.currentChunk.y);
-                    map.playerEnterChunk(sId, this, cx, cy);
-                    this.currentChunk.x = cx;
-                    this.currentChunk.y = cy;
-                }
-            }
-    	}
-    };
-    this.queueMove = function(dx, dy) {
-        if(map.isValid(tx+dx, ty+dy)){
-            moveQ.queueMove(tx  + dx, ty + dy);
-        }
-    	
-    };
-    this.move = function(move_x, move_y) {
-        moveTime = gameState.frameTime;
-        map.freeSpot(tx, ty);
-        tx = move_x;
-        ty = move_y;
-        map.occupySpot(tx, ty);
-        moving = true;
-    };
-    this.attack = function(target) {
-        if(!isDead){
-            if(gameState.frameTime - lastAttack > attackCooldown/attackSpeed && combatTools.dist(this.getData(), target.getData()) < equipment.primary.range){
-                lastAttack = gameState.frameTime;
-
-                if(equipment.primary.type == 'bow'){
-                    // do bow stuff and possibly return here i fline of sight is broken
-                }
-                var damage = combatTools.calcDamage(this, target);
-                var damageDealt = target.takeDamage(this, damage); //this is for further use in lifesteal etc
-            }
-        }
-    };
-    this.takeDamage = function() {
-
-    };
-    this.die = function() {
-        //lose xp?
-        //health to 100%
-        //set spawn
-        //
-
-    };
-    this.gainExperience = function(gained_exp) {
-        experience += gained_exp;
-        while(experience >= expTools.getLevelExp(level + 1))
-            this.levelUp();
-    };
-    this.levelUp = function() {
-        level++;
-        logger.log('LEVEL UP ! player xp=', experience, "level=", level);
-    };
-    this.addTimePlayed = function(logoutTime) { //invoked on logout
-    	timePlayed += logoutTime-lastLogin;
     };
 };

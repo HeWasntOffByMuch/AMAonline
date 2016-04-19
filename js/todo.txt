@@ -1,0 +1,68 @@
+TO DO:
+
+- write server entities [new] - DONE
+	- entity decay - DONE
+	- entity broadcasting - DONE
+? each death spawns an entity - DONE
+- broadcast to nearby function [rewrite] - DONE
+? entity empty = remove entity - NO
+? make persistent after restart ? - NO
+- moving entities between containers - DONE
+- moving inside containers - DONE
+[ !BUG ] - serverside persistent collision boxes ?? figure out how to reproduce - DONE
+[ !BUG ] - ASTAR BLOCKING SERVER - DONE.
+[ !BUG ] - tiles arent being loaded when you log in on farther chunks(x > 1) - DONE
+- port range combat - DONE
+- fix astar on player conrners. - DONE
+
+
+
+
+- start thinking about characted progression
+
+
+! IMPORTANT - clean up all the getData()'s
+
+
+- drop loot
+
+- lose xp on death? lose eq on death?
+
+- mob run away on low hp?
+
+- some bug remaining with lingering collisions on server
+
+- repopulate equipment properly (recreate objects to at least use instanceof)
+
+CLIENTSIDE:
+
+- write client entities - DONE
+- write health popups - DONE
+- fix clientX/Y issue in moveQ client - DONE
+- split client js files. - DONE
+- fix snapback from server when queue-walking (quick double-press into obstacle) - DONE
+- write name drawing - DONE
+- write exp popups +  broadcasts - DONE
+- add entity handlers onclick etc. - DONE
+- unknown issue with number popup spam - DONE (peristent keys in server chunks)
+
+
+
+
+- draw xp bar
+- right click context menu
+- write animations
+	- unit
+	- entity
+	- short - DONE
+	- attack -DONE
+	- projectile etc. - DONE
+
+
+- fix gui bug with s/sw window resize -fixed on github
+
+- globalFakeItem bug. is movable.
+
+- window sticks to nothing
+
+- global tooltip flashes/resets timeout
