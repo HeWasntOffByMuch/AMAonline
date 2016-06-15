@@ -1,0 +1,37 @@
+{
+  "name": "amaonline",
+  "version": "1.0.0",
+  "description": "node.js based 2D MMORPG engine.",
+  "main": "network_settings_sample.js",
+  "dependencies": {
+    "bcrypt-nodejs": "^0.0.3",
+    "mongodb": "^2.1.4",
+    "node-gameloop": "^0.1.0",
+    "mongoose": "^4.3.6",
+    "colors": "^1.1.2",
+    "socket.io": "^1.4.4",
+    "tracer": "^0.8.2"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thealmightyone/AMAonline.git"
+  },
+  "keywords": [
+    "mmo",
+    "rpg",
+    "2d",
+    "node.js",
+    "top-down"
+  ],
+  "author": "Adam Baszak",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/thealmightyone/AMAonline/issues"
+  },
+  "homepage": "https://github.com/thealmightyone/AMAonline#readme"
+}
