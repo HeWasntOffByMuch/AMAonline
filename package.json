@@ -1,0 +1,30 @@
+{
+  "name": "amaonline",
+  "version": "1.0.0",
+  "description": "",
+  "main": "network_settings_sample.js",
+  "dependencies": {
+    "bcrypt-nodejs": "^0.0.3",
+    "colors": "^1.1.2",
+    "mongodb": "^2.1.4",
+    "socket.io": "^1.4.4",
+    "mongoose": "^4.3.6",
+    "node-gameloop": "^0.1.0",
+    "tracer": "^0.8.2"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thealmightyone/AMAonline.git"
+  },
+  "author": "Adam Baszak",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/thealmightyone/AMAonline/issues"
+  },
+  "homepage": "https://github.com/thealmightyone/AMAonline#readme"
+}
