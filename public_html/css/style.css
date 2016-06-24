@@ -1,0 +1,642 @@
+@font-face {
+  font-family: 'Tibia Font';
+  src: url('Tibia Font DP.ttf');
+  
+  /*font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Roboto Regular'), local('Roboto-Regular'), url(//fonts.gstatic.com/s/roboto/v15/CWB0XYA8bzo0kSThX0UTuA.woff2)format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2212, U+2215, U+E0FF, U+EFFD, U+F000;
+  */
+  }
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+  font-family: Tahoma;
+  /*dont know if this is legit. so far nothing broke*/
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;  
+  -khtml-user-select: none;   
+  -moz-user-select: none;     
+  -ms-user-select: none;      
+  user-select: none;          
+}
+html, body {
+  height: 100%;
+  background-image: url(../img/bg.png);
+  overflow: hidden;
+}
+.foreground {
+  position: absolute;
+  width: 1024px;
+  height: 512px;
+}
+.canvas {
+  width: 1024px;
+  transition-delay: 3s;
+  transition: -webkit-filter 1s, width 1s;
+}
+.grayscale {
+  -webkit-filter: grayscale(1) brightness(0.4);
+}
+.halfsize {
+  width: 512px;
+}
+.tile {
+  position: absolute;
+  background-image:url(../img/tiles/base_tiles.png); width:32px; height:32px;
+}
+.player {
+  left: 512px;
+  top: 240px;
+  position: absolute;
+  background-image:url(../img/player/player_rayman_down.png); width:32px; height:48px;
+}
+.game-container {
+  overflow: hidden;
+  background-color: #181913;
+  position: relative;
+  width: 1024px;
+  margin: 0 auto;
+  z-index: 10;
+  top: 20px;
+  height: 512px;
+}
+
+.game-container-filter {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.gui-window {
+  position: absolute;
+  border: 1px solid #676a5a;
+  box-shadow: 0 0 3px #000;
+  border-radius: 3px;
+  background-color: black;
+  box-shadow: 2px 2px 3px #000;
+  z-index: 100;
+  overflow: hidden;
+  transition-property: margin-left;
+  transition-duration: 0.15s;
+}
+
+.gui-window-header {
+  height: 30px;
+  line-height: 30px;
+  color: #676a5a;
+  font-weight: 700;
+  border-left: 1px solid black;
+  border-top: 1px solid black;
+  border-right: 1px solid black;
+  border-top-left-radius: 2px;
+  border-top-right-radius: 2px;
+  background: linear-gradient(#272822,#181913);
+  background-color: #181913;
+  font-family: Tahoma;
+  font-size: 12px;
+  cursor: default;
+}
+
+.gui-window-header-icon {
+  position: absolute;
+  left: 5px;
+  top: 5px;
+  width: 20px;
+  height: 20px;
+}
+
+.gui-window-header-text {
+  position: relative;
+  overflow: hidden;
+  white-space: nowrap;
+  cursor: inherit;
+  padding-left: 30px; 
+  padding-right: 58px;
+}
+
+.gui-window-header-buttons {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  line-height: normal;
+}
+
+.gui-window-border {
+  position: absolute;
+  border-left: 5px solid #181913;
+  border-right: 5px solid #181913;
+  border-bottom: 5px solid #181913;
+  border-bottom-left-radius: 2px;
+  border-bottom-right-radius: 2px;
+  background: #676a5a;
+  z-index: 0;
+  left: 1px; 
+  top: 30px; 
+  right: 1px; 
+  bottom: 1px; 
+  cursor: default;
+}
+.gui-window-content {
+  position: absolute;
+  background-color: #393b32;
+  overflow: auto;
+  cursor: default;
+  visibility: visible;
+  z-index: 1;
+  border: 1px solid #676a5a;
+  border-radius: 2px;
+  left: 4px; 
+  top: 30px; 
+  right: 4px; 
+  bottom: 4px;
+}
+.gui-window-content:hidden {
+  overflow: hidden;
+}
+
+.gui-clist {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.gui-clist-container {
+  flex: 1 1 auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.gui-clist-footer {
+  text-align: center;
+  overflow: hidden;
+  height: 30px;
+  flex: 0 0 auto;
+  border-top: 1px solid #272822;
+  padding: 2px;
+}
+
+.gui-clist-footer input {
+  border: 1px solid #272822;
+  background-color: #676a5a;
+  padding: 4px 6px !important;
+  font-family: Verdana;
+  width: 50%;
+  border-radius: 4px;
+}
+.gui-clist-footer button {
+  border: 1px solid #272822;
+  background-color: #676a5a;
+  padding: 4px 6px !important;
+  font-family: Verdana;
+  width: 50%;
+  border-radius: 4px;
+}
+
+.gui-clist-item {
+  height: 60px;
+  border-top: 1px solid #393b32;
+  border-bottom: 1px solid #393b32;
+  cursor: pointer;
+}
+
+.gui-clist-item .avatar {
+  margin: 4px;
+  width: 50px;
+  height: 50px;
+  float: left;
+  background-image: url(../img/avatar.png);
+}
+
+.gui-clist-item:hover, .gui-clist-item.pressed {
+  background-color: #676a5a;
+  border-top: 1px solid #272822;
+  border-bottom: 1px solid #272822;  
+}
+.hidden-right {
+  margin-left: 100%;
+  transition: margin-left 0.2s ease-in;
+}
+.loading-table {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  background-color: #393b32;
+  left: 0;
+  top: 0;
+  z-index: 101;
+}
+.loading-table img {
+  height: 50px;
+}
+.loading-table b {
+  font-size: 11px;
+  color: #676a5a;
+}
+
+.form-field {
+  width: 250px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.form-field label {
+  font-size: 10px;
+  font-weight: bold;
+}
+
+.form-field input[type=text], .form-field input[type=password] {
+  border: 1px solid #272822;
+  background-color: #676a5a;
+  padding: 4px 3px !important;
+  font-family: Verdana;
+  width: 100%;
+  border-radius: 3px;
+
+  -webkit-transition: all 0.2s ease;
+  -moz-transition: all 0.2s ease;
+  -o-transition: all 0.2s ease;
+  -ms-transition: all 0.2s ease;
+  transition: all 0.2s ease;
+}
+.taken input[type=text], .taken input[type=password] {
+  border: 1px solid rgba(207, 21, 21, .9);
+  background-color: rgba(207, 21, 21, .3);
+}
+
+.form-field input[type=button] {
+  border: 1px solid #272822;
+  background-color: #676a5a;
+  padding: 4px 6px !important;
+  font-family: Verdana;
+  width: 50%;
+  border-radius: 4px;
+}
+.form-field button {
+  border: 1px solid #272822;
+  background-color: #676a5a;
+  padding: 4px 6px !important;
+  font-family: Verdana;
+  width: 50%;
+  border-radius: 4px;
+  background-size: 200% 100%;
+  background-image: linear-gradient(to right, #676a5a 50%, #9D9E99 50%);
+  transition: background-position 0.2s;
+}
+.form-field button:hover {
+  background-position: -100% 0;
+}
+.form-field button:disabled {
+  border: 1px solid rgba(207, 21, 21, .9);
+  background-position: 0 0;
+  background-image: none;
+  background-color: rgba(207, 21, 21, .3);
+  transition: all 0.1s ease-in-out;
+}
+.form-field button.green {
+  border: 1px solid green;
+  background-position: 0 0;
+  background-image: none;
+  background-color: green;
+  transition: all 0.1s ease-in-out;
+}
+.form-field button.inactive {
+  border: 1px solid gray;
+  background-position: 0 0;
+  background-image: none;
+  background-color: gray;
+  transition: all 0.1s ease-in-out;
+}
+ button.anim-alt {
+  margin: auto;
+  border: 1px solid #272822;
+  background-color: #676a5a;
+  padding: 4px 6px !important;
+  font-family: Verdana;
+  width: 50%;
+  border-radius: 4px;
+  background-size: 200% 100%;
+  background-image: linear-gradient(to right, #676a5a 50%, #9D9E99 50%);
+  transition: background-position 0.2s;
+}
+button.anim-alt:hover {
+  background-position: 100% 0;
+}
+
+.form-field input[type=checkbox] {
+  vertical-align: middle;
+}
+
+.form-field input:focus {
+  outline: #676a5a auto 5px;
+  outline-offset: -2px;
+}
+
+
+.globalTooltip {
+  border: 2px solid #676a5a;
+  border-radius: 3px;
+  background-color: #181913;
+  color: #676a5a;
+  position: absolute;
+  z-index: 9999;
+  font-family: Verdana;
+  font-size: 10px;
+  padding:5px;
+  box-shadow: 0 0 3px #000;
+  opacity: 0.8;
+  min-height: 60px;
+}
+
+.window .win_btns div {
+  float:left;
+}
+
+
+.slot {
+  background-image: url(../img/slot.png);
+  position: absolute;
+  overflow: hidden;
+}
+.primary {
+  background-image: url(../img/slot_primary.png);
+}
+.secondary {
+  background-image: url(../img/slot_secondary.png);
+}
+.head {
+  background-image: url(../img/slot_head.png);
+}
+.body {
+  background-image: url(../img/slot_body.png);
+}
+.legs {
+  background-image: url(../img/slot_legs.png);
+}
+.boots {
+  background-image: url(../img/slot_boots.png);
+}
+.skill {
+  border: 1px solid;
+  border-color: rgba(255, 200, 0, 0.6);
+}
+.bp {
+  background-image: url(../img/slot.png);
+  position: absolute;
+  overflow: hidden;
+}
+.talent-container {
+  width: 64px;
+  height: 64px;
+  position: relative;
+  overflow: hidden;
+  display: inline-block;
+  margin: 8px 8px 8px 8px;
+}
+.talent-icon {
+  position: relative;
+  overflow: hidden;
+  width: 64px;
+  height: 64px;
+  border: 1px transparent;
+  border-radius: 0%;
+  box-shadow: 1px 1px 4px #000;
+  background-image: url(../img/skills/talents_resized/blocking.jpg);
+  z-index: 101;
+}
+.talent-icon:after {
+  content: "";
+  position: absolute;
+  top: -110%;
+  left: -210%;
+  width: 200%;
+  height: 200%;
+  opacity: 0;
+  transform: rotate(30deg);
+  
+  background: rgba(255, 255, 255, 0.13);
+  background: linear-gradient(
+    to right, 
+    rgba(255, 255, 255, 0.13) 0%,
+    rgba(255, 255, 255, 0.13) 77%,
+    rgba(255, 255, 255, 0.5) 92%,
+    rgba(255, 255, 255, 0.0) 100%
+  );
+}
+.talent-icon:hover:after {
+  opacity: 1;
+  top: -30%;
+  left: -30%;
+  transition-property: left, top, opacity;
+  transition-duration: 0.7s, 0.7s, 0.15s;
+  transition-timing-function: ease;
+}
+.talent-icon:active:after {
+  opacity: 0;
+}
+.talent-icon:active {
+  box-shadow: none;
+}
+.talent-level {
+  position: absolute;
+  font-size: 12px;
+  color: #fff;
+  right: 0px;
+  bottom: 0px;
+  height: 16px;
+  min-width: 16px;
+  width: auto;
+  border-top-left-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.6);
+  text-align: center;
+}
+.button_close {
+  width:12px;
+  padding-left:2px;
+}
+
+.button_close:hover {
+  background-color: #DEE7FA;
+  border-radius: 2px;
+}
+
+.globalFakeItem {
+  display: none;
+  position: absolute;
+  z-index: 9999;
+  opacity: 0.5;
+}
+.item {
+  position: absolute;
+  background-size: 32px;
+}
+
+.map_container{
+  width:100%;
+  height:100%;
+}
+
+.ctx_menu {
+  border: 1px solid #292929;
+  border-radius: 3px;
+  border-top-left-radius: 0px;
+  position: absolute;
+  background-color: rgba(36, 36, 36, 0.7);
+  font-size: 10px;
+  font-weight: bold;
+  font-family: verdana;
+  color: #BBBBBB;
+  /*padding: 1px;*/
+  z-index: 99999;
+}
+
+.ctx_menu li {
+  list-style-type: none;
+  cursor: pointer;
+  padding: 1px;
+  padding-left: 3px;
+  padding-right: 5px;
+}
+
+.ctx_menu li:hover {
+  background-color: #292929;
+}
+
+.ctx_menu li.ctx_sep {
+  background-color: #4D4D4D;
+  padding-bottom: 0;
+}
+.ctx_dark_border {
+  border: 1px solid #0F0F0F;
+}
+.ctx_dark_border li:hover {
+  background-color: #0F0F0F;
+}
+
+.phone-tab {
+  position: absolute;
+  top: 32px;
+  left: 878px;
+  display: inline-block;
+  background-color: rgba(36, 36, 36, 0.7);
+  box-shadow: 1px 1px 3px #000;
+  border: 1px solid #292929;
+  border-radius: 3px;
+  z-index: 11;
+  overflow: hidden;
+  transition: border 1s ease-in-out;
+}
+
+.phone-tab-icon-accept {
+  position: absolute;
+  height: 32px;
+  width: 32px;
+  z-index: 12;
+  background-color: #07CC00;
+  border: 0px solid #292929;
+  border-radius: 3px;
+  border-top-right-radius: 0px;
+  border-bottom-right-radius: 0px;
+  /*box-shadow: 1px 1px 3px #000;*/
+  visibility: hidden;
+}
+.phone-tab-icon-accept:hover {
+  background-image: url(../img/phone_logo_up.png)
+}
+.phone-tab-icon-refuse {
+  position: absolute;
+  left: 64px;
+  height: 32px;
+  width: 32px;
+  z-index: 12;
+  background-color: #CC0000;
+  border: 0px solid #292929;
+  border-radius: 3px;
+  border-top-left-radius: 0px;
+  border-bottom-left-radius: 0px;
+  /*box-shadow: 1px 1px 3px #000;*/
+  visibility: hidden;
+}
+.phone-tab-icon-refuse:hover {
+  background-image: url(../img/phone_logo_down.png)
+}
+.phone-tab-icon-hangup {
+  position: absolute;
+  left: 0px;
+  width: 96px;
+  height: 32px;
+  z-index: 12;
+  background-color: #CC0000;
+  border: 0px solid #292929;
+  border-radius: 3px;
+  border-top-left-radius: 0px;
+  border-bottom-left-radius: 0px;
+  /*box-shadow: 1px 1px 3px #000;*/
+  visibility: hidden;
+}
+.phone-tab-icon-hangup:hover {
+  background-image: url(../img/phone_logo_down.png);
+  background-repeat: no-repeat;
+  background-position: center;
+}
+.phone-tab-text {
+  text-align: center;
+  font-size: 12px;
+  font-weight: bold;
+  font-family: verdana;
+  color: #BBBBBB;
+}
+.orange-border {
+  border: 1px solid #FFB300;
+  transition: 1s ease-in-out;
+}
+.green-border {
+  border: 1px solid #2DFF08;
+  transition: 1s ease-in-out;
+}
+/*.phone-tab-icon:hover {
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 20px;
+  height: 20px;
+  border: 1px solid #292929;
+  border-radius: 3px;
+}*/
+
+.modal-cover {
+  background-image: url(../img/cover.png);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 99;  
+}
+
+
+
+::-webkit-scrollbar {
+  display: none;
+  width: 14px;
+  height: 14px;
+}
+::-webkit-scrollbar-corner {  /* ? */
+  background-color: transparent;
+}
+::-webkit-scrollbar-track {
+  background-color: #72736D;
+}
+::-webkit-scrollbar-thumb {
+  width: 10px;
+  background-color: #383836;
+  border: 1px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: #2B2B29;
+  border: 1px solid transparent;
+  background-clip: content-box;
+}
