@@ -1,0 +1,9 @@
+initiating 288 chunks in  12 by 24 grid...
+[ |||||||||||| ] 
+chunks_loading_time: 4.201ms
+288 chunks initiated
+Socket listening on 8000 ...
+connected to monogDB
+669 map collisions loaded
+2866 ground tiles loaded
+24 spawners loaded

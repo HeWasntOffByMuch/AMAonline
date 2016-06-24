@@ -1,0 +1,107 @@
+TO DO:
+
+- write server entities [new] - DONE
+	- entity decay - DONE
+	- entity broadcasting - DONE
+? each death spawns an entity - DONE
+- broadcast to nearby function [rewrite] - DONE
+? entity empty = remove entity - NO
+? make persistent after restart ? - NO
+- moving entities between containers - DONE
+- moving inside containers - DONE
+[ !BUG ] - serverside persistent collision boxes ?? figure out how to reproduce - DONE
+[ !BUG ] - ASTAR BLOCKING SERVER - DONE.
+[ !BUG ] - tiles arent being loaded when you log in on farther chunks(x > 1) - DONE
+- port range combat - DONE
+- fix astar on player conrners. - DONE
+- drop loot - DONE
+- finish item mana cost & range - DONE
+
+
+
+
+- start thinking about character progression
+
+
+! IMPORTANT - clean up all the getData()'s - this is touched in a couple of places like entities
+
+
+
+- lose xp on death? lose eq on death?
+
+- mob run away on low hp?
+
+- some bug remaining with lingering collisions on server
+
+- repopulate equipment properly (recreate objects to at least use instanceof) ?? is that really necessary?
+
+- loot with quantity > 1
+	- proper stacking client/serverside
+
+- typechecking on items serverside
+
+- get rid of usesLeft for quantity to take its place
+
+- fix not updating player when invisible, item changes not taking place client side. custom events?
+
+- do containers in game and possible in player backpack
+
+- do buff/debuff queue
+
+CLIENTSIDE:
+
+- write client entities - DONE
+- write health popups - DONE
+- fix clientX/Y issue in moveQ client - DONE
+- split client js files. - DONE
+- fix snapback from server when queue-walking (quick double-press into obstacle) - DONE
+- write name drawing - DONE
+- write exp popups +  broadcasts - DONE
+- add entity handlers onclick etc. - DONE
+- unknown issue with number popup spam - DONE (peristent keys in server chunks)
+- clean up ctx menu code - DONE
+- global tooltip flashes/resets timeout - FIXED ITSELF
+- right click context menu - DONE
+- close loot windows when players moves from the vicinity - DONE
+- need a way to use items on client - DONE
+- removing items from client gui-windows - DONE
+- clientside pathfinding spam causes client desynchronization. fix MovementQueue in utils.js ??? - DONE
+
+
+
+- draw xp bar
+- write animations
+	- unit -DONE
+	- entity
+	- short - DONE
+	- attack -DONE
+	- projectile etc. - DONE
+
+
+- fix gui bug with s/sw window resize -fixed on github
+
+- globalFakeItem bug. is movable.
+
+- window sticks to nothing
+
+
+- get rid of DOM/JS redundancies such as items in 2 places ?????????
+
+- client loot windows are really messy, consider using just one window and updating it.
+
+- rewrite client eq? consider rewriting server containers/ equipment (there isnt much in it after all) 
+	right now you have to synch client in 2 places and then synch server
+
+- not putting items into entities restriction feels really limiting
+
+- loot with quantity > 1
+
+- add stacking items to match the server logic
+
+- loot windows appearing behind previous when player moved
+
+- containers you can put stuff in - synch between clients?
+
+- trading 
+
+- detecting animation end fail on callend -- peerJS related. possibly fixed
