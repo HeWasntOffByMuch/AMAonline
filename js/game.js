@@ -6,8 +6,8 @@ module.exports = function Game() {
     var fs = require('fs');
     var db = require('./database.js');
     var Player = require('./player.js');
-    var freshPlayer = require('./freshPlayer.js');
-    var existingPlayer = require('./existingPlayer.js');
+    var FreshPlayer = require('./freshPlayer.js');
+    var ExistingPlayer = require('./existingPlayer.js');
     var Mob = require('./mob.js');
     var SpawnerManager = require('./spawnerManager.js');
     var Account = require('./account.js');
@@ -171,6 +171,7 @@ module.exports = function Game() {
     this.getAccountOverview = function(acc_user, callback) { //return player data for the login screen
         var p_data = [];
         db.findAllPlayers({belongsTo: acc_user}, function(err, players) {
+          console.log(players)
         	if(err) callback(err, null);
         	else{
         		for(var i = 0; i< players.length; i++){
@@ -220,7 +221,7 @@ module.exports = function Game() {
 				callback(null, false, 'taken');
 			}
 			else{ //name available
-				var p = new freshPlayer(gameState, null, db.newObjectId(), name, acc_username);
+				var p = new FreshPlayer(gameState, null, db.newObjectId(), name, acc_username);
                 acc.incrementPlayerCount();
 			    p = p.getData();
 			    db.insertNewPlayer(p); // so he doesnt get lost.
@@ -358,7 +359,8 @@ module.exports = function Game() {
     		else{
     			var username = playerAccounts[sId].getData().username;
     			if(player_data.belongsTo == username){ //identity theft check, maybe consider watchlist?
-    				var player = new existingPlayer(gameState, sId, player_data);
+            console.log(player_data)
+    				var player = new ExistingPlayer(gameState, sId, player_data);
     				//add the player to the game.
     				playersById[player_data._id] = player;
     				playersBySocket[sId] = player;

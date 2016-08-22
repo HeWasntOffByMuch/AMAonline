@@ -61,8 +61,12 @@ CLIENTSIDE:
 
 - fix gui bug with s/sw window resize -fixed on github
 
-- globalFakeItem bug. is movable.
+- globalFakeItem bug. is movable. -fixed
 
 - window sticks to nothing
 
 - global tooltip flashes/resets timeout
+
+- start making separate modules like rpg
+
+- make separate files fith functions for skills, dont keep that in player class.

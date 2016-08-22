@@ -1,9 +1,20 @@
 var enums = require('./enums.js');
 var Player = require('./player.js');
 
-function freshPlayer(gameState, socket_id, newId, name, acc_user) {
-    Player.call(this, gameState, socket_id, new Date(), new Date(), 0, newId, name, 1, acc_user);
+function FreshPlayer(gameState, socket_id, newId, name, acc_user) {
+    const options = {
+        gameState,
+        socket_id,
+        creationDate: new Date(),
+        lastlogin: new Date(),
+        time_played: 0,
+        id: newId,
+        name,
+        level: 1,
+        belongs_to: acc_user
+    };
+    Player.call(this, options);
 }
-freshPlayer.prototype = Object.create(Player.prototype);
-freshPlayer.prototype.constructor = freshPlayer;
-module.exports = freshPlayer;
+FreshPlayer.prototype = Object.create(Player.prototype);
+FreshPlayer.prototype.constructor = FreshPlayer;
+module.exports = FreshPlayer;
