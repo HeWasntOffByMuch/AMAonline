@@ -21,6 +21,7 @@ TO DO:
 - start thinking about characted progression
 
 
+
 ! IMPORTANT - clean up all the getData()'s
 
 
@@ -32,7 +33,7 @@ TO DO:
 
 - some bug remaining with lingering collisions on server
 
-- repopulate equipment properly (recreate objects to at least use instanceof)
+- repopulate equipment properly (recreate objects to at least use instanceof) no.
 
 CLIENTSIDE:
 
@@ -49,9 +50,10 @@ CLIENTSIDE:
 
 
 
-- draw xp bar
-- right click context menu
+- draw xp bar - DONE
+- right click context menu - DONE
 - write animations
+    - player - DONE
 	- unit
 	- entity
 	- short - DONE
@@ -61,8 +63,12 @@ CLIENTSIDE:
 
 - fix gui bug with s/sw window resize -fixed on github
 
-- globalFakeItem bug. is movable.
+- globalFakeItem bug. is movable. -fixed
 
 - window sticks to nothing
 
 - global tooltip flashes/resets timeout
+
+- start making separate modules like rpg
+
+- make separate files fith functions for skills, dont keep that in player class.
