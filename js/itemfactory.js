@@ -8,41 +8,51 @@ var db = require('./database.js');
 
 function ItemFactory(){
 	this.createWeapon = function(template_num) {
-		var data = weaponTemplates[template_num];
-		return new Weapon(db.newObjectId(), data.name, data.stackable, 1, data.type, data.weight, data.desc, data.rarity, data.range, data.damageMin, data.damageMax, data.attackCooldown, data.onEquip);
+		var data = Object.assign(weaponTemplates[template_num], {
+            id: db.newObjectId(),
+            quantity: 1
+        });
+		return new Weapon(data);
 	};
-    this.reCreateWeapon = function(obj) {
-        var onUseFunction = obj.funId;
-        return new Weapon(obj.id, obj.name, obj.stackable, 1, obj.type, data.weight, obj.desc, obj.range, obj.damageMin, obj.damageMax, obj.attackCooldown);
-    };
 	this.createArmor = function(template_num) {
-		var data = armorTemplates[template_num];
-		return new Armor(db.newObjectId(), data.name, data.stackable, 1, data.type, data.weight, data.desc, data.rarity, data.onEquip);
+        var data = Object.assign(armorTemplates[template_num], {
+            id: db.newObjectId(),
+            quantity: 1
+        });
+		return new Armor(data);
 	};
 	this.createItem = function(template_num) {
-		var data = itemTemplates[template_num];
-		return new Consumable(db.newObjectId(), data.name, data.stackable, 1, data.type, data.weight, data.desc, data.usesLeft, data.useFunction, data.useValue);
+        var data = Object.assign(itemTemplates[template_num], {
+            id: db.newObjectId(),
+            quantity: 1
+        });
+        console.log(data)
+		return new Consumable(data);
 	};
     this.createSkill = function(template_num) {
-        var data = skillTemplates[template_num];
-        return new Skill(db.newObjectId(), data.name, data.stackable, 1, data.type, data.weight, data.desc, data.manaCost, data.useFunction, data.useValue, data.range, data.onEquip);
+        var data = Object.assign(skillTemplates[template_num], {
+            id: db.newObjectId(),
+            quantity: 1
+        });
+        return new Skill(data);
     };
 	this.createCustomItem = function() { // debug only ??
 
 	};
     this.createGold = function() {
-        return new Item(db.newObjectId(), 'Gold', true, 1, 'gold', 5);
+        var data = Object.assign({}, {
+            id: db.newObjectId(),
+            name: 'Gold',
+            stackable: true,
+            quantity: 1,
+            type: 'gold',
+            weight: 5
+        });
+        return new Item(data);
     };
 }
 
 module.exports = ItemFactory;
-
-var allFunctions = {
-    1: function(){
-        this.wielder.heal(20);
-    }
-};
-
 
 var weaponTemplates = {
   1: {
