@@ -4,11 +4,11 @@ Skill.prototype = Object.create(Item.prototype);
 Skill.prototype.constructor = Skill;
 function Skill(data){
 	Item.call(this, data);
-	this.desc = data.description;
-	this.manaCost = data.mana_cost;
-	this.useFunction = data.use_function;
-	this.useValue = data.use_value;
-	this.range = data.cast_range;
-	this.onEquip = data.on_equip;
+	this.desc = data.desc;
+	this.manaCost = data.manaCost;
+	this.useFunction = data.useFunction;
+	this.useValue = data.useValue;
+	this.range = data.range;
+	this.onEquip = data.onEquip;
 }
 module.exports = Skill;

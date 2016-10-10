@@ -574,8 +574,8 @@ module.exports = function Player(options) {
     	timePlayed += logoutTime-lastLogin;
     };
     this.useItemOnSelf = function(from) { //rewrite needed for this - item property checks
-        console.log('player using item')
         var item = equipment[from.id].contents[from.x][from.y];
+        console.log('player using item', item)
         if(item){
             if(item.useFunction){ // this is not a definitive no go for using items - redesign? use hasOwnProperty?
                 this.removeUsesFromConsumable(from, item);
