@@ -1,10 +1,10 @@
 module.exports = Item;
 
-function Item(id, name, stackable, quantity, type, weight){
-  this.id = id;
-  this.name = name;
-  this.stackable = stackable;
-  this.quantity = quantity;
-  this.type = type;
-  this.weight = weight;
+function Item(data){
+  this.id = data.id;
+  this.name = data.name;
+  this.stackable = data.stackable;
+  this.quantity = data.quantity;
+  this.type = data.type;
+  this.weight = data.weight;
 }
