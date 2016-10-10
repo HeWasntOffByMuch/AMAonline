@@ -12,6 +12,7 @@ var defaultValues = {
     physicalResistance: 0,
     mobWeapon: {type: enums.weaponType.MELEE, range: 1.5, damageMin: 1, damageMax: 4}
 };
+// module.exports = function Mob(gameState, options){
 module.exports = function Mob(gameState, id, spawn_x, spawn_y, name, experience, health_max, speed_base, possible_loot, mob_weapon){
 	var map = MAP;
     var spawnPoint = {

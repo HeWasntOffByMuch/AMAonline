@@ -35,40 +35,43 @@ var defaultValues = {
     healthMax: 90,
     manaMax: 5
 };
-module.exports = function Player(gameState, socket_id, creationDate, lastlogin, time_played, id, name, level, belongs_to, spawn_x, spawn_y, speed_base, speed_cur, health_cur, health_max, mana_cur, mana_max, level, experience, _equipment, skill_tree, accuracyRating, evasionRating, parryRating, blockRating) {
+
+module.exports = function Player(options) {
+    var gameState = options.gameState;
     var map = MAP;
-    var _id = id;
-    var sId = socket_id || null;
+    var _id = options.id;
+    var sId = options.socket_id || null;
     this.setNewSocketId = function(new_sid) { sId = new_sid };
     this.getSocketId = function() { return sId };
-    name = name;
+
+    var name = options.name;
     var type = enums.objType.PLAYER;
     level = level || 1;
-    var lastLogin = lastlogin || new Date();
-    creationDate = creationDate || new Date();
-    var belongsTo = belongs_to;
-    var timePlayed = time_played || 0; //only saves if u log out properly.
+    var lastLogin = options.lastlogin || new Date();
+    var creationDate = options.creationDate || new Date();
+    var belongsTo = options.belongsTo;
+    var timePlayed = options.timePlayed || 0; //only saves if u log out properly.
 
     //unsafe defaults
-    var x = spawn_x || gameState.globalSpawnPoint.x;
-    var y = spawn_y || gameState.globalSpawnPoint.y;
+    var x = options.spawn_x || gameState.globalSpawnPoint.x;
+    var y = options.spawn_y || gameState.globalSpawnPoint.y;
     var tx = x;
     var ty = y;
 
     map.occupySpot(tx, ty);
-    this.currentChunk = {x: Math.floor(x/gameState.chunkSize.x), y: Math.floor(y/gameState.chunkSize.y)};
+    this.currentChunk = {x: Math.floor(x / gameState.chunkSize.x), y: Math.floor(y / gameState.chunkSize.y)};
 
     var moveQ = new MovementQueue();
-    var skillTree = new SkillTree(skill_tree);
-	var moveTime = false;
-	var moving = false;
+    var skillTree = new SkillTree(options.skillTree);
+    var moveTime = false;
+    var moving = false;
     var nextMove = false;
 
     //attacking and HP
     var isDead = false;
     var isVisible = true;
     var timeOfDeath;
-    var deathHistory = [];
+    var deathHistory = options.deathHistory || [];
 
 
     var inCombat = false; //is currently engaged in combat
@@ -82,9 +85,9 @@ module.exports = function Player(gameState, socket_id, creationDate, lastlogin, 
     // due to clock differences and possible latency
     var prematureAttackRequestFromClient = false;
     var prematureAttackTarget = null;
-    // levels and EXP
-    var level = level || 1;
-    var experience = experience || 0;
+
+    var level = options.level || 1;
+    var experience = options.experience || 0;
 
 
     // RPG PROPERTIES
@@ -94,17 +97,10 @@ module.exports = function Player(gameState, socket_id, creationDate, lastlogin, 
 
     var speedBase = defaultValues.speedBase - level * defaultValues.speedBonusPerLevel;
     var speedCur = speedBase;
-    
-    var healthMax = defaultValues.healthMax;
-    var healthCur = health_cur || healthMax;
 
     var passiveRegenValue = 2;
     var passiveRegenInterval = 6000;
     var passiveRegenTime = gameState.frameTime;
-
-    var manaMax = defaultValues.manaMax;
-    var manaCur = mana_cur || manaMax;
-    
 
     this._ = {
         healthMax: defaultValues.healthMax + level * defaultValues.maxHealthPerLevel + skillTree.getSkillLevel('physique', 'healthPool') * 10,
@@ -128,23 +124,28 @@ module.exports = function Player(gameState, socket_id, creationDate, lastlogin, 
         healingMagic: 1 + skillTree.getSkillLevel('intelligence', 'healingMagic') * 0.1,
         lifeSteal: 0,
         offensiveInstant: 1 + skillTree.getSkillLevel('intelligence', 'offensiveInstant') * 0.1
-    }
+    };
 
-    var equipment;
+
+    var healthCur = options.healthCur || this._.healthMax;
+
+    var manaCur = options.manaCur || this._.manaMax;
+
+    var equipment = options.equipment;
     
-    if(_equipment){
+    if(equipment){
         equipment = {
-            primary:    new Container(_equipment.primary.id, 1, 1, _equipment.primary.contents, 'primary'),
-            secondary:  new Container(_equipment.secondary.id, 1, 1, _equipment.secondary.contents, 'secondary'),
-            body:       new Container(_equipment.body.id, 1, 1, _equipment.body.contents, 'body'),
-            legs:       new Container(_equipment.legs.id, 1, 1, _equipment.legs.contents, 'body'),
-            boots:      new Container(_equipment.boots.id, 1, 1, _equipment.boots.contents, 'boots'),
-            head:       new Container(_equipment.head.id, 1, 1, _equipment.head.contents, 'head'),
-            backpack:   new Container(_equipment.backpack.id, _equipment.backpack.w, _equipment.backpack.h, _equipment.backpack.contents, 'backpack'),
-            skill0:     new Container(_equipment.skill0.id, 1, 1, _equipment.skill0.contents, 'skill0'),
-            skill1:     new Container(_equipment.skill1.id, 1, 1, _equipment.skill1.contents, 'skill1'),
-            skill2:     new Container(_equipment.skill2.id, 1, 1, _equipment.skill2.contents, 'skill2'),
-            skill3:     new Container(_equipment.skill3.id, 1, 1, _equipment.skill3.contents, 'skill3')
+            primary:    new Container(equipment.primary.id, 1, 1, equipment.primary.contents, 'primary'),
+            secondary:  new Container(equipment.secondary.id, 1, 1, equipment.secondary.contents, 'secondary'),
+            body:       new Container(equipment.body.id, 1, 1, equipment.body.contents, 'body'),
+            legs:       new Container(equipment.legs.id, 1, 1, equipment.legs.contents, 'body'),
+            boots:      new Container(equipment.boots.id, 1, 1, equipment.boots.contents, 'boots'),
+            head:       new Container(equipment.head.id, 1, 1, equipment.head.contents, 'head'),
+            backpack:   new Container(equipment.backpack.id, equipment.backpack.w, equipment.backpack.h, equipment.backpack.contents, 'backpack'),
+            skill0:     new Container(equipment.skill0.id, 1, 1, equipment.skill0.contents, 'skill0'),
+            skill1:     new Container(equipment.skill1.id, 1, 1, equipment.skill1.contents, 'skill1'),
+            skill2:     new Container(equipment.skill2.id, 1, 1, equipment.skill2.contents, 'skill2'),
+            skill3:     new Container(equipment.skill3.id, 1, 1, equipment.skill3.contents, 'skill3')
         };
     }
     else{   // IF NEW CHARACTER
@@ -440,7 +441,7 @@ module.exports = function Player(gameState, socket_id, creationDate, lastlogin, 
     this.useMana = function(val) {
         manaCur -= Math.min(manaCur, val); //ca't go below 0
     };
-    this.restoreMana = function(val, target) {
+    this.restoreMana = function(val) {
         manaCur += Math.min(val, this._.manaMax - manaCur);
     };
     this.checkItemRange = function(item, target) {
@@ -528,13 +529,13 @@ module.exports = function Player(gameState, socket_id, creationDate, lastlogin, 
     this.digGround = function() {
         console.log('digging')
         //would want the target too be diggable entity
-    }
+    };
     this.die = function(killer) {
         isDead = true;
         inCombat = false;
         timeOfDeath = new Date().getTime();
         map.freeSpot(tx, ty);
-        deathHistory.push({killedBy: killer.getData().name, date: new Date().getTime()})
+        deathHistory.push({killedBy: killer.getData().name, date: new Date().getTime()});
         IO.to(sId).emit('you-have-died', {});
         var nearbyPlayers = MAP.getChunk(this.currentChunk.x, this.currentChunk.y).getNearbyPlayers();
         for(var socketid in nearbyPlayers){
@@ -544,7 +545,6 @@ module.exports = function Player(gameState, socket_id, creationDate, lastlogin, 
         ENTMAN.createCorpse(tx, ty, 'Grave', loot, 60000);
         //lose xp?
         //health to 100%
-
     };
     this.gainExperience = function(gained_exp) {
         experience += gained_exp;

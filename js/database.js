@@ -1,6 +1,6 @@
 	var mongoose = require('mongoose');
 
-	mongoose.connect('mongodb://localhost:27017');
+	mongoose.connect('mongodb://localhost:27017/ama#02');
 	var db = mongoose.connection;
 	db.on('error', console.error.bind(console, 'connection error:'));
 	db.once('open', function(callback) {
@@ -30,21 +30,21 @@
 	    	primary: Object,
 	    	secondary: Object,
 	    	body: Object,
-            legs: Object,
-            boots: Object,
-            head: Object,
-            backpack: Object,
-            skill0: Object,
-            skill1: Object,
-            skill2: Object,
-            skill3: Object
+				legs: Object,
+				boots: Object,
+				head: Object,
+				backpack: Object,
+				skill0: Object,
+				skill1: Object,
+				skill2: Object,
+				skill3: Object
 
 	    },
 	    accuracyRating: Number,
-        evasionRating: Number,
-        parryRating: Number,
-        blockRating: Number,
-        skillTree: Object
+			evasionRating: Number,
+			parryRating: Number,
+			blockRating: Number,
+			skillTree: Object
 	});
 	var playerModel = mongoose.model('Player', playerSchema);
 

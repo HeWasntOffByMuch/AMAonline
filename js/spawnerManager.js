@@ -40,19 +40,6 @@ module.exports = function SpawnerManager(gameState, allMobs){
 			this.createSpawner(constructors[spawners[i].name], spawners[i].x, spawners[i].y, spawners[i].respawnTime);
 			
 		}
-		// old spawns in case something goes wrong
-		
-		// this.createSpawner(Bat, 60, 26, 2000);
-		// this.createSpawner(Bat, 27, 17, 2000);
-		// this.createSpawner(Dummy, 48, 45, 4000);
-		// this.createSpawner(Bat, 29, 17, 2000);
-		// this.createSpawner(Bat, 30, 17, 2000);
-		// this.createSpawner(Bat, 31, 17, 2000);
-		// this.createSpawner(Bat, 36, 24, 2000);
-		// this.createSpawner(Bat, 37, 22, 2000);
-		// this.createSpawner(Bat, 38, 22, 2000);
-		// this.createSpawner(Bat, 39, 22, 2000);
-		// this.createSpawner(Bat, 67, 27, 2000);
 	};
 	this.update = function() {
 		for(var i = 0; i < this.allSpawners.length; i++){
@@ -76,12 +63,12 @@ module.exports = function SpawnerManager(gameState, allMobs){
 
 // this is cause mob types come as strings from the editor :(
 var constructors = {
-	'Bat': Bat,
-	'Dummy': Dummy,
-	'Ghoul': Ghoul,
-	'Scorpion': Scorpion,
-	'BigBat': BigBat
-}
+	Bat,
+	Dummy,
+	Ghoul,
+	Scorpion,
+	BigBat
+};
 
 
 
@@ -96,7 +83,7 @@ function Bat(gameState, id, spawn_x, spawn_y) {
         1: {item: IFAC.createItem(5), dropChance: 0.9},
         2: {item: IFAC.createItem(3), dropChance: 0.9},
         3: {item: IFAC.createArmor(5), dropChance: 1},
-        4: {item: IFAC.createSkill(4), dropChance: 1},
+        4: {item: IFAC.createSkill(6), dropChance: 1},
         5: {item: IFAC.createItem(6), dropChance: 1}
     };
     Mob.call(this, gameState, id, spawn_x, spawn_y, 'Bat', exp, hp, speed, possibleLoot, mobWeapon);
@@ -135,7 +122,7 @@ function Ghoul(gameState, id, spawn_x, spawn_y) {
         3: {item: IFAC.createItem(4), dropChance: 1} 
     };
 
-    Mob.call(this, gameState, id, spawn_x, spawn_y, 'Ghoul', exp, hp, speed, possibleLoot, mobWeapon);
+  Mob.call(this, gameState, id, spawn_x, spawn_y, 'Ghoul', exp, hp, speed, possibleLoot, mobWeapon);
 }
 Ghoul.prototype = Object.create(Mob.prototype);
 Ghoul.prototype.constructor = Ghoul;
@@ -148,17 +135,17 @@ function Scorpion(gameState, id, spawn_x, spawn_y) {
     	
     };
 
-    Mob.call(this, gameState, id, spawn_x, spawn_y, 'Scorpion', exp, hp, speed, possibleLoot);
+  Mob.call(this, gameState, id, spawn_x, spawn_y, 'Scorpion', exp, hp, speed, possibleLoot);
 }
 Scorpion.prototype = Object.create(Mob.prototype);
 Scorpion.prototype.constructor = Scorpion;
 
 
 function Dummy(gameState, id, spawn_x, spawn_y) {
-	var healthMax = 99999;
+	var healthMax = 9999999;
 
 
-    Mob.call(this, gameState, id, spawn_x, spawn_y, 'Dummy', 0, healthMax);
+  Mob.call(this, gameState, id, spawn_x, spawn_y, 'Dummy', 0, healthMax);
     
     this.update = function() {};
     this.die = function() {
