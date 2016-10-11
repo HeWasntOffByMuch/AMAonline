@@ -40,21 +40,20 @@ module.exports = function Player(options) {
     var gameState = options.gameState;
     var map = MAP;
     var _id = options.id;
-    var sId = options.socket_id || null;
+    var sId = options.socketId || null;
     this.setNewSocketId = function(new_sid) { sId = new_sid };
     this.getSocketId = function() { return sId };
 
     var name = options.name;
     var type = enums.objType.PLAYER;
-    level = level || 1;
-    var lastLogin = options.lastlogin || new Date();
+    var lastLogin = options.lastLogin || new Date();
     var creationDate = options.creationDate || new Date();
     var belongsTo = options.belongsTo;
     var timePlayed = options.timePlayed || 0; //only saves if u log out properly.
 
     //unsafe defaults
-    var x = options.spawn_x || gameState.globalSpawnPoint.x;
-    var y = options.spawn_y || gameState.globalSpawnPoint.y;
+    var x = options.x || gameState.globalSpawnPoint.x;
+    var y = options.y || gameState.globalSpawnPoint.y;
     var tx = x;
     var ty = y;
 
@@ -571,7 +570,7 @@ module.exports = function Player(options) {
         logger.log('player ' + name + ' respawned at ', x, y);
     };
     this.addTimePlayed = function(logoutTime) { //invoked on logout
-    	timePlayed += logoutTime-lastLogin;
+    	timePlayed += logoutTime - lastLogin;
     };
     this.useItemOnSelf = function(from) { //rewrite needed for this - item property checks
         var item = equipment[from.id].contents[from.x][from.y];
@@ -770,7 +769,6 @@ module.exports = function Player(options) {
             isDead: isDead,
             isVisible: isVisible,
             deathHistory: deathHistory,
-            level: level,
             experience: experience,
             equipment: {
                 primary: equipment.primary,
@@ -805,7 +803,6 @@ module.exports = function Player(options) {
             healthMax: this._.healthMax,
             manaCur: manaCur,
             manaMax: this._.manaMax,
-            level: level,
             experience: experience,
             equipment: {
                 primary: equipment.primary,

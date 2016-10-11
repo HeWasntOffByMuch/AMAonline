@@ -1,18 +1,13 @@
 var enums = require('./enums.js');
 var Player = require('./player.js');
 
-function FreshPlayer(gameState, socket_id, newId, name, acc_user) {
-    const options = {
-        gameState,
-        socket_id,
+function FreshPlayer(options) {
+    Object.assign(options, {
         creationDate: new Date(),
-        lastlogin: new Date(),
-        time_played: 0,
-        id: newId,
-        name,
-        level: 1,
-        belongsTo: acc_user
-    };
+        lastLogin: new Date(),
+        timePlayed: 0,
+        level: 1
+    });
 
     Player.call(this, options);
 }
