@@ -38,7 +38,6 @@
 				skill1: Object,
 				skill2: Object,
 				skill3: Object
-
 	    },
 	    accuracyRating: Number,
 			evasionRating: Number,

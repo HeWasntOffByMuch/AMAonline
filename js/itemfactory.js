@@ -26,7 +26,6 @@ function ItemFactory(){
             id: db.newObjectId(),
             quantity: 1
         });
-        console.log(data)
 		return new Consumable(data);
 	};
     this.createSkill = function(template_num) {

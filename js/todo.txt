@@ -17,7 +17,7 @@ TO DO:
 
 
 
-
+- healthMAx doesnt increase until after character recreation
 - start thinking about characted progression
 
 

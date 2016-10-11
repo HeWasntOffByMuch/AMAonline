@@ -18,7 +18,7 @@ module.exports = {
 	calcPlayerDamage: function(attacker, target) {
 		var attackerEq = attacker.getEquipment();
 		//limits damage disparity to 1000
-		var baseDamage = (Math.random()*1000) % (attackerEq.primary.contents[0][0].damageMax - attackerEq.primary.contents[0][0].damageMin) + attackerEq.primary.contents[0][0].damageMin;
+		var baseDamage = Math.random() * (attackerEq.primary.contents[0][0].damageMax - attackerEq.primary.contents[0][0].damageMin) + attackerEq.primary.contents[0][0].damageMin;
 		var evasionChance = Math.min((target._.evasionRating- attacker._.accuracyRating) / 1000, combatDefaults.evasionCap);
 		var parryChance = Math.min((target._.parryRating- attacker._.accuracyRating) / 1000, combatDefaults.parryCap);
 		var blockChance = Math.min((target._.blockRating- attacker._.accuracyRating) / 1000, combatDefaults.blockCap);
