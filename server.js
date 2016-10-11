@@ -1,5 +1,6 @@
 // I wrote it without warmth and without love. Therefore, there is no artistic merit in it.
 require('./js/network_settings.js');
+var logger = require('tracer').colorConsole();
 var serverStartTime = new Date().getTime();
 var Game = require('./js/game.js');
 var game = GAME = new Game();
@@ -8,18 +9,18 @@ var colors = require('colors');
 
 
 // ============= SOCKET.IO SETUP ============= //
-var io = IO = require('socket.io')(port); console.log("Socket listening on " + port + " ...".yellow);
+var io = IO = require('socket.io')(port); console.log(`Socket listening on ${port} ...`.yellow);
 game.exposeIO(io);
 
 // io.set('transports', [ 'websocket' ]);
 
 io.on('connection', function(socket) {
-	console.log("someone connected to socket.");
+	logger.log("someone connected to socket.");
 	// socket.emit('token-request', {});
  //    socket.on('send-token', function(data) {
  //        game.checkToken(data, function(err, username) {
  //            if (err) {
- //                console.log(err);
+ //                logger.log(err);
  //                socket.disconnect();
  //            } else {
  //                game.removeToken(data);
@@ -30,14 +31,14 @@ io.on('connection', function(socket) {
  //            }
  //        });
  //    });
-    socket.on('login-info', function(data) {
-        console.log(data);
-        game.authenticateAccount(data.user, data.pass, function(err, response, acc_data) {
+    socket.on('login-info', function(authData) {
+        logger.log(authData);
+        game.authenticateAccount(authData.user, authData.pass, function(err, response, acc_data) {
             if (err) {
-                console.log(err);
+                logger.log(err);
             } else if (response === true) { //password match
                 game.accountLogIn(socket.id, acc_data);
-                game.getAccountOverview(data.user, function(err, p_data) { //here's where you send playerdata/overview
+                game.getAccountOverview(authData.user, function(err, p_data) { //here's where you send playerdata/overview
                      socket.emit('login-success', p_data);
                 });
             } else if (response === false) { //password doesnt match username
@@ -52,7 +53,7 @@ io.on('connection', function(socket) {
         var password = data.pass1;
         var password_repeat = data.pass2;
         if(password != password_repeat){ //checked client side as well
-            console.log('someones messing with the client');
+            logger.log('someones messing with the client');
             socket.emit('sign-up-error', {});
             return;
         }
@@ -60,7 +61,7 @@ io.on('connection', function(socket) {
 
         game.registerAccount(username, password, 'mail@example.com', function(err, response) {
             if(err){
-                console.log(err);
+                logger.log(err);
             }
             else if(response === false){ // name taken.
                 socket.emit('sign-up-taken', {});
@@ -77,7 +78,7 @@ io.on('connection', function(socket) {
         }
     	game.createNewPlayer(data.name, 1, socket.id, function(err, player_data, option) {
     		if(err){
-    			console.log(err);
+    			logger.log(err);
     		}
             if(player_data){ //name good. player created
                 socket.emit('player-created', player_data);
@@ -94,7 +95,7 @@ io.on('connection', function(socket) {
     socket.on('start-game-request', function(data) {
     	game.logInPlayer(socket.id, data.id, function(err, data) {
     		if(err)
-    			console.log(err);
+    			logger.log(err);
     		else{
     			if(data){
     				socket.emit('start-game-ok', {
@@ -103,7 +104,7 @@ io.on('connection', function(socket) {
     					chunkSize: game.getGameState().chunkSize
     				});
                 } else{
-    				console.log('something went wrong. this is not your player');
+    				logger.log('something went wrong. this is not your player');
                 }
     		}
     	});
@@ -141,7 +142,7 @@ io.on('connection', function(socket) {
         game.accountLogOut(socket.id);
     });
     socket.on('player-moved-item', function(data) {
-        // console.log(data)
+        // logger.log(data)
         var player = game.getPlayerBySocket(socket.id);
         if(player && !player.isDead()){
             player.moveInventoryItem(data.from, data.to);
@@ -166,7 +167,7 @@ io.on('connection', function(socket) {
         }
     });
     socket.on('player-call-request', function(data) {
-        console.log(data);
+        logger.log(data);
         var playerCalling = game.getPlayerBySocket(socket.id);
         var playerBeingCalled = game.getPlayerById(data.playerCalled).getSocketId();
         if(playerCalling && playerBeingCalled){

@@ -55,17 +55,17 @@ module.exports = function Game() {
     var saveGameState = function() {
     	// map.getChunkStateMap();
     	var numSaved = 0;
-    	// console.log('game saved kinda');
+    	// logger.log('game saved kinda');
     	io.emit('server-message', {message: 'game saving, hold on to your chunks', color: 'yellow'});
     	var options = {multi: false};
     	for(var i in playersById){
 	    	db.updatePlayer({_id: i}, playersById[i].getData(), options, function(err, num_affected) {
 	    		if(err)
-	    			console.log(err);
+	    			logger.log(err);
 	    		else{
 	    			numSaved++;
 	    			if(numSaved == gameState.totalPlayers){
-	    				// console.log((gameState.totalPlayers/numSaved)*100 + '% players saved. carry on.');
+	    				// logger.log((gameState.totalPlayers/numSaved)*100 + '% players saved. carry on.');
                     }
 	    		}
 	    	});
@@ -74,9 +74,9 @@ module.exports = function Game() {
     this.ping = function(data) {
         io.emit('server-message', {message: data.toString(), color: '#FF2E2E'});
         // eval(data);
-        // console.log(Object.keys(entityManager.getAllEntities()).length + ' entities on server');
-        // console.log('total players in chunks', countPlayersInChunks())
-        // console.log('d/c players', disconnectedPlayers)
+        // logger.log(Object.keys(entityManager.getAllEntities()).length + ' entities on server');
+        // logger.log('total players in chunks', countPlayersInChunks())
+        // logger.log('d/c players', disconnectedPlayers)
     };
     function countPlayersInChunks() {
         var count = 0;
@@ -84,7 +84,7 @@ module.exports = function Game() {
             for(var j = 0; j < gameState.mapSize.y/gameState.chunkSize.y; j++){
                 count += Object.keys(map.getChunk(i, j).getPlayersBySocket()).length;
                 if(Object.keys(map.getChunk(i, j).getPlayersBySocket()).length > 0)
-                    console.log(map.getChunk(i, j).getPlayersBySocket())
+                    logger.log(map.getChunk(i, j).getPlayersBySocket())
             }
         }
         return count;
@@ -98,7 +98,7 @@ module.exports = function Game() {
     };
     this.authenticateAccount = function(username, password, callback) {
     	// db.findAllPlayers({}, function(err, res) {
-    	// 	console.log(res)
+    	// 	logger.log(res)
     	// });
     	db.getAccountByUsername(username, function(err, account){
             if (err) {
@@ -126,7 +126,7 @@ module.exports = function Game() {
             else{ //on acc not found. hash pass, imediately insert into db
                 bcrypt.hash(password, null, null, function(err, hash) { //make hash and register account in callback.
                     if (err)
-                        console.log(err);
+                        logger.log(err);
                     else {
                         var a = new Account(db.newObjectId(), username, hash, email, false, new Date(), 0);
                         db.insertNewAccount(a.getData());
@@ -144,7 +144,7 @@ module.exports = function Game() {
         gameState.totalAccounts++;
         var a = acc_data;
     	playerAccounts[sId] = new Account(a._id, a.username, a.password, a.email, a.emailValidated, a.creationDate, a.playerCount, a.playerCountLimit);
-        console.log('logging in account', a.username)
+        logger.log('logging in account', a.username)
     };
     this.accountLogOut = function(sId) { //add saving
         var a = this.getAccountBySocket(sId);
@@ -153,12 +153,12 @@ module.exports = function Game() {
         var options = {multi: false};
         db.updateAccount({_id: acc._id}, acc, options, function(err, num_affected) {
             if(err){
-                console.log(err);
+                logger.log(err);
             }
             else{
                 gameState.totalAccounts--;
                 delete playerAccounts[sId];
-                console.log('acc', acc._id, 'signed out');
+                logger.log('acc', acc._id, 'signed out');
             }
         });
     };
@@ -171,7 +171,6 @@ module.exports = function Game() {
     this.getAccountOverview = function(acc_user, callback) { //return player data for the login screen
         var p_data = [];
         db.findAllPlayers({belongsTo: acc_user}, function(err, players) {
-          console.log(players)
         	if(err) callback(err, null);
         	else{
         		for(var i = 0; i< players.length; i++){
@@ -200,13 +199,12 @@ module.exports = function Game() {
     };
     this.createNewPlayer = function(name, level, sId, callback) {
         var acc = this.getAccountBySocket(sId);
-        logger.log(acc.getData());
         if(!acc){
             logger.log('no account with', sId, 'has been found.');
             return; //need proper callbacks for retruns and need client handlers?
         }
         if(acc.getData().playerCount >= acc.getData().playerCountLimit){
-            console.log('overcap. making a callback')
+            logger.log('overcap. making a callback');
             callback(null, false, 'overcapacity');
             return;
         }
@@ -219,22 +217,26 @@ module.exports = function Game() {
     			callback(err, null);
     		} else if(players.length){ // name taken
 				callback(null, false, 'taken');
-			}
-			else{ //name available
-				var p = new FreshPlayer(gameState, null, db.newObjectId(), name, acc_username);
-                acc.incrementPlayerCount();
-			    p = p.getData();
-			    db.insertNewPlayer(p); // so he doesnt get lost.
-			    var p_data = { // this goes back to the client, so its vague. just one player data
-			    	id: p._id,
-    				name: p.name,
-    				level: p.level,
-    				timePlayed: p.timePlayed
+        } else{ //name available
+          var p = new FreshPlayer({
+            gameState,
+            socketId: null,
+            id: db.newObjectId(),
+            name,
+            belongsTo: acc_username
+          });
+          acc.incrementPlayerCount();
+          p = p.getData();
+          db.insertNewPlayer(p); // so he doesnt get lost.
+          var p_data = { // this goes back to the client, so its vague. just one player data
+            id: p._id,
+            name: p.name,
+            level: p.level,
+            timePlayed: p.timePlayed
 
-			    };
-				callback(null, p_data);
-			}
-
+          };
+          callback(null, p_data);
+        }
     	});
     };
     this.getPlayerBySocket = function(sId) {
@@ -256,13 +258,13 @@ module.exports = function Game() {
         return playersById;
     };
     this.logGame = function() {
-    	console.log('-----PENDING TOKENS------');
-    	console.log(pendingTokens);
-    	console.log('-----PLAYER ACCOUNTS------');
+    	logger.log('-----PENDING TOKENS------');
+    	logger.log(pendingTokens);
+    	logger.log('-----PLAYER ACCOUNTS------');
     	for(var i in playerAccounts)
-    		console.log(i);
-    	console.log('-----PLAYERS ONLINE------');
-    	console.log(playersById);
+    		logger.log(i);
+    	logger.log('-----PLAYERS ONLINE------');
+    	logger.log(playersById);
     };
     this.returnGameState = function() {
     	return gameState;
@@ -277,7 +279,7 @@ module.exports = function Game() {
     };
     this.checkToken = function(token, callback) {
     	if(pendingTokens.hasOwnProperty(token)){
-    		console.log('token recognized');
+    		logger.log('token recognized');
     		callback(null, pendingTokens[token]);
     	}
     	else{
@@ -286,7 +288,7 @@ module.exports = function Game() {
     };
     this.logOutPlayer = function(sId, logoutTime) {
     	if(!playersBySocket.hasOwnProperty(sId)){
-    		console.log('no such player');
+    		logger.log('no such player');
     		return;
     	}
     	var player = playersBySocket[sId];
@@ -305,10 +307,10 @@ module.exports = function Game() {
         var options = {multi: false};
     	db.updatePlayer({_id: id}, player.getData(), options, function(err, num_affected) {
     		if(err){
-    			console.log(err);
+    			logger.log(err);
     		}
     		else{
-                console.log('player logging out')
+                logger.log('player logging out')
                 map.playerLeaveChunk(sId, player);
                 map.freeSpot(player.getData().tx, player.getData().ty);
                 var nearbyPlayers = map.getChunk(player.currentChunk.x, player.currentChunk.y).getNearbyPlayers();
@@ -319,7 +321,7 @@ module.exports = function Game() {
                 delete playersBySocket[sId];
                 delete playersById[id];
                 gameState.totalPlayers--;
-    			console.log('player ' + player.getData().name + ' logged out.');
+    			logger.log('player ' + player.getData().name + ' logged out.');
     		}
     	});
     };
@@ -359,14 +361,13 @@ module.exports = function Game() {
     		else{
     			var username = playerAccounts[sId].getData().username;
     			if(player_data.belongsTo == username){ //identity theft check, maybe consider watchlist?
-            console.log(player_data)
     				var player = new ExistingPlayer(gameState, sId, player_data);
     				//add the player to the game.
     				playersById[player_data._id] = player;
     				playersBySocket[sId] = player;
     				gameState.totalPlayers++;
     				map.playerEnterChunk(sId, player);
-    				console.log('player ' + player_data.name + " has logged in.");
+    				logger.log('player ' + player_data.name + " has logged in.");
                     //write getDataForClient and send it
     				callback(null, player.getDataForClientInitiation()); //dont send all the player_data, limit it to necessary properties
     			}
