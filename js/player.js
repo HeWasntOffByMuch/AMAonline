@@ -541,7 +541,7 @@ module.exports = function Player(options) {
             IO.to(socketid).emit('other-player-died', {id: _id});
         }
         var loot = {};
-        ENTMAN.createCorpse(tx, ty, 'Grave', loot, 60000);
+        ENTMAN.createCorpse({x: tx, y: ty, name: 'Grave', contents: loot, decayTime: 60000, gonerId: _id});
         //lose xp?
         //health to 100%
     };
@@ -607,13 +607,13 @@ module.exports = function Player(options) {
                 return;
             if(item.manaCost){
                 if(this.checkMana(item.manaCost))
-                    this.useMana(item.manaCost)
+                    this.useMana(item.manaCost);
                 else
                     return;
             }
             this.removeUsesFromConsumable(data, item);
             if(!item.useValue)
-                this[item.useFunction](null, usedOn)
+                this[item.useFunction](null, usedOn);
             else
                 this[item.useFunction](item.useValue, usedOn);
 

@@ -301,7 +301,7 @@ module.exports = function Mob(gameState, id, spawn_x, spawn_y, name, experience,
     this.heal = function(val) {
         healthCur += Math.min(val, healthMax - healthCur);
     };
-    this.resurrect = function() {
+    this.getResurrected = function() {
     	//cant resurrect a mob
     };
 }
