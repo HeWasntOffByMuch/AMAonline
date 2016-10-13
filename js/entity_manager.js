@@ -29,7 +29,7 @@ function EntityManager(gameState) {
                                 [IFAC.createWeapon(9) , IFAC.createWeapon(5) , IFAC.createWeapon(6)]
                             ];
         var emptyContents = [
-                                [0, 0, 0, 0, 0],
+                                [IFAC.createItem(4), 0, 0, 0, 0],
                                 [0, 0, 0, 0, 0],
                                 [0, 0, 0, 0, 0],
                                 [0, 0, 0, 0, 0]
@@ -42,8 +42,8 @@ function EntityManager(gameState) {
         var id = curId++;
         var cx = Math.floor(options.x/gameState.chunkSize.x);
         var cy = Math.floor(options.y/gameState.chunkSize.y);
-        allEntities[id] = new Entity(options.id, options.x, options.y, cx, cy, 'corpse', options.name, options.contents, options.decayTime, true, options.gonerId);
-        MAP.getChunk(cx, cy).addEntity(options.id, allEntities[id]);
+        allEntities[id] = new Entity(id, options.x, options.y, cx, cy, 'corpse', options.name, options.contents, options.decayTime, true, options.gonerId);
+        MAP.getChunk(cx, cy).addEntity(id, allEntities[id]);
     };
 
     this.createContainer = function(x, y, name, contents) {

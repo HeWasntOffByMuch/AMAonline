@@ -171,7 +171,7 @@ module.exports = function Player(options) {
         return isDead;
     };
     this.isVisible = function() {
-        return  isVisible;
+        return isVisible;
     };
     this.getEquipment = function() {
         return equipment;
@@ -239,7 +239,7 @@ module.exports = function Player(options) {
         map.occupySpot(tx, ty);
         moving = true;
     };
-    this.setPosition = function(spawn_x, spawn_y) { //for respawn and teleports and what not
+    this.setPosition = function(spawn_x, spawn_y) { // [BUG] for respawn and teleports and what not // possible location of persistant collision box here !!!
         x = spawn_x;
         y = spawn_y;
         tx = spawn_x;
@@ -598,10 +598,20 @@ module.exports = function Player(options) {
         console.log('player using item on target');
         var usedOn;
         var item = equipment[data.id].contents[data.x][data.y];
-        if(data.targetType === enums.objType.PLAYER)
+        if(data.targetType === enums.objType.PLAYER) {
             usedOn = GAME.getAllPlayersById()[data.targetId];
-        else if(data.targetType === enums.objType.MOB)
+        }
+        else if(data.targetType === enums.objType.MOB) {
             usedOn = GAME.getAllMobs()[data.targetId];
+        }
+        else if(data.targetType === enums.objType.ENTITY) {
+            var entity = ENTMAN.getAllEntities()[data.targetId];
+            var playerTarget = GAME.getAllPlayersById()[entity.gonerId];
+            if (!playerTarget) {
+                return;
+            }
+            usedOn = playerTarget;
+        }
         if(item && usedOn && item.useFunction){
             if(!this.checkItemRange(item, usedOn))
                 return;
@@ -612,11 +622,7 @@ module.exports = function Player(options) {
                     return;
             }
             this.removeUsesFromConsumable(data, item);
-            if(!item.useValue)
-                this[item.useFunction](null, usedOn);
-            else
-                this[item.useFunction](item.useValue, usedOn);
-
+            this[item.useFunction](item.useValue, usedOn);
         }
     };
     this.removeUsesFromConsumable = function(from, item) {
@@ -744,6 +750,7 @@ module.exports = function Player(options) {
         for(var name in stats){
             console.log(name, 'incremented by', stats[name])
             this._[name] += stats[name];
+            console.log(name,  'is now', this._[name]);
         }
     };
     this.getData = function() { //this is also all the stuff that gets saved into and pulled from db
