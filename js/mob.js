@@ -10,24 +10,25 @@ var defaultValues = {
     parryRating: 400,
     blockRating: 400,
     physicalResistance: 0,
+		retargetChanceOnDamage: 0.05,
     mobWeapon: {type: enums.weaponType.MELEE, range: 1.5, damageMin: 1, damageMax: 4}
 };
 // module.exports = function Mob(gameState, options){
-module.exports = function Mob(gameState, id, spawn_x, spawn_y, name, experience, health_max, speed_base, possible_loot, mob_weapon){
+module.exports = function Mob(gameState, id, spawn_x, spawn_y, name, experience, health_max, speed_base, possible_loot, mob_weapon, retarget_chance){
 	var map = MAP;
-    var spawnPoint = {
-    	x: spawn_x,
-    	y: spawn_y
-    }
-    var _id = id;
-    var type = enums.objType.MOB;
-    var name = name;
+	var spawnPoint = {
+		x: spawn_x,
+		y: spawn_y
+	};
+	var _id = id;
+	var type = enums.objType.MOB;
+	var name = name;
 	var x = spawn_x;
 	var y = spawn_y;
 	var tx = x;
 	var ty = y;
 
-    map.occupySpot(tx, ty);
+	map.occupySpot(tx, ty);
 	this.currentChunk = {x: Math.floor(x/gameState.chunkSize.x), y: Math.floor(y/gameState.chunkSize.y)};
 
 
@@ -43,6 +44,7 @@ module.exports = function Mob(gameState, id, spawn_x, spawn_y, name, experience,
 	var aggroRange = 8;
 	var aggroProximity = 1; //how close a unit gets to its target
 	var target = null;
+	var retargetChanceOnDamage = retarget_chance || defaultValues.retargetChanceOnDamage;
 	var pathfindingPersistence = 300; // cap on nodes visited by A*
 
 	var pathBlocked = false; // findPath returned .timedOut: true
@@ -50,24 +52,24 @@ module.exports = function Mob(gameState, id, spawn_x, spawn_y, name, experience,
 	var pathBlockedInterval = 1500; // how long to wait until next astar to current target
 	var moveQ = new MovementQueue(pathfindingPersistence);
 
-    //attacking and HP
-    var lastAttack = gameState.frameTime;
-    var attackCooldown = 1000;
-    var attackSpeed = 1;
+	//attacking and HP
+	var lastAttack = gameState.frameTime;
+	var attackCooldown = 1000;
+	var attackSpeed = 1;
 
-    // RPG PROPERTIES
-    var accuracyRating = accuracyRating || defaultValues.accuracyRating;
-    var evasionRating = evasionRating || defaultValues.evasionRating;
-    var parryRating = parryRating || defaultValues.parryRating;
-    var blockRating = blockRating || defaultValues.blockRating;
-    var physicalResistance = physicalResistance || defaultValues.physicalResistance;
-    this._ = {
-        accuracyRating: accuracyRating || defaultValues.accuracyRating,
-        evasionRating: evasionRating || defaultValues.evasionRating,
-        parryRating: parryRating || defaultValues.parryRating,
-        blockRating: blockRating || defaultValues.blockRating,
-        physicalResistance: physicalResistance || defaultValues.physicalResistance,
-    };
+	// RPG PROPERTIES
+	var accuracyRating = accuracyRating || defaultValues.accuracyRating;
+	var evasionRating = evasionRating || defaultValues.evasionRating;
+	var parryRating = parryRating || defaultValues.parryRating;
+	var blockRating = blockRating || defaultValues.blockRating;
+	var physicalResistance = physicalResistance || defaultValues.physicalResistance;
+	this._ = {
+			accuracyRating: accuracyRating || defaultValues.accuracyRating,
+			evasionRating: evasionRating || defaultValues.evasionRating,
+			parryRating: parryRating || defaultValues.parryRating,
+			blockRating: blockRating || defaultValues.blockRating,
+			physicalResistance: physicalResistance || defaultValues.physicalResistance
+	};
 
 	//health 
 	var isDead = false;
@@ -91,13 +93,13 @@ module.exports = function Mob(gameState, id, spawn_x, spawn_y, name, experience,
         boots: 0,
         head: 0,
         loot: {}
-    };
-    this.getEquipment = function() {
-    	return equipment;
-    };
-    this.isDead = function() {
-    	return isDead;
-    };
+	};
+	this.getEquipment = function() {
+		return equipment;
+	};
+	this.isDead = function() {
+		return isDead;
+	};
 	this.getData = function() {
 		return {
 			_id: _id,
@@ -116,14 +118,14 @@ module.exports = function Mob(gameState, id, spawn_x, spawn_y, name, experience,
 		};
 	};
 	this.getCombatData = function() {
-        return {
-            accuracyRating: accuracyRating,
-            evasionRating: evasionRating,
-            parryRating: parryRating,
-            blockRating: blockRating,
-            equipment: equipment
-        }
-    };
+		return {
+			accuracyRating: accuracyRating,
+			evasionRating: evasionRating,
+			parryRating: parryRating,
+			blockRating: blockRating,
+			equipment: equipment
+		}
+	};
 	this.getEquipment = function() {
 		return equipment;
 	};
@@ -189,34 +191,34 @@ module.exports = function Mob(gameState, id, spawn_x, spawn_y, name, experience,
 		}
 	};
 	this.aggroCheck = function() {
-        if (!aggressive) return;
-        if (!target) { // look for target
-            var c = map.getChunk(this.currentChunk.x, this.currentChunk.y);
-            var g = c.getNeighbors();
-            c = c.getPlayersById();
-            for (var i in c) {
-                if (this.rangeCheck(c[i])){
-                	target = c[i];
-                	target.engageInCombat();
-                    return;
-                }
-            }
-            for (var i = 0; i < g.length; i++) {
-                var players = g[i].getPlayersById();
-                for (var j in players) {
-                    if (this.rangeCheck(players[j])){
-                    	target = players[j];
-                		target.engageInCombat();
-                        return;
-                    }
-                }
-            }
-        } else {
-            if (target.isDead() || !target.isVisible()) {
-                target = null;
-                return;
-            }
-        }
+			if (!aggressive) return;
+			if (!target) { // look for target
+					var c = map.getChunk(this.currentChunk.x, this.currentChunk.y);
+					var g = c.getNeighbors();
+					c = c.getPlayersById();
+					for (var i in c) {
+							if (this.rangeCheck(c[i])){
+								target = c[i];
+								target.engageInCombat();
+									return;
+							}
+					}
+					for (var i = 0; i < g.length; i++) {
+							var players = g[i].getPlayersById();
+							for (var j in players) {
+									if (this.rangeCheck(players[j])){
+										target = players[j];
+									target.engageInCombat();
+											return;
+									}
+							}
+					}
+			} else {
+					if (target.isDead() || !target.isVisible()) {
+							target = null;
+							return;
+					}
+			}
 	};
 	this.rangeCheck = function(p) {
 		if(!p.isDead() && p.isVisible() && combatTools.dist(this.getData(), p.getData()) < aggroRange && combatTools.calcLineOfSight(this.getData(), p.getData()).isClear){
@@ -265,7 +267,7 @@ module.exports = function Mob(gameState, id, spawn_x, spawn_y, name, experience,
 		if(!target){
 			target = attacker;
 		} else {
-			if(Math.random() < 0.05){ // 5% chance that mob switches on taking damage
+			if(Math.random() < retargetChanceOnDamage){ // 5% chance that mob switches on taking damage
 				target = attacker;
 			}
 		}

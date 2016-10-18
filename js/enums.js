@@ -68,6 +68,13 @@ module.exports = {
   weaponType: {
     MELLE: 0,
     RANGED: 1
+  },
+  damageEffect: {
+    NORMAL: 0,
+    EVADED: 1,
+    BLOCKED: 2,
+    PARRIED: 3,
+    CRITICAL: 4
   }
 };
   // if(Object.freeze){

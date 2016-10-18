@@ -240,6 +240,7 @@ module.exports = function Player(options) {
         moving = true;
     };
     this.setPosition = function(spawn_x, spawn_y) { // [BUG] for respawn and teleports and what not // possible location of persistant collision box here !!!
+        map.freeSpot(tx, ty); // this is new non tested, attempts to fix not even reproduced issue.
         x = spawn_x;
         y = spawn_y;
         tx = spawn_x;
@@ -297,24 +298,27 @@ module.exports = function Player(options) {
             console.log('player attempts to attack himself.');
             return;
         }
+
+        this.engageInCombat();
+        var damage = combatTools.calcPlayerDamage(this, target); // {value, state} popups on client wil be based off this
+
         var nearbyPlayers = MAP.getChunk(this.currentChunk.x, this.currentChunk.y).getNearbyPlayers();
         if(equipment.primary.contents[0][0].type == 'ranged'){
             // do ranged stuff and possibly return here i fline of sight is broken
             var los = combatTools.calcLineOfSight(this.getData(), target.getData());
             for(var socketid in nearbyPlayers){
-                IO.to(socketid).emit('player-attack-range', {id: _id, target: {x: los.obstacle.x, y: los.obstacle.y}, hit: los.isClear});
+                IO.to(socketid).emit('player-attack-range', {id: _id, target: {x: los.obstacle.x, y: los.obstacle.y}, hit: los.isClear, damage});
             }
             if(!los.isClear)
                 return;
         }
         else if(equipment.primary.contents[0][0].type == 'melee'){
             for(var socketid in nearbyPlayers){
-                IO.to(socketid).emit('player-attack-melee', {id: _id, target: {x: target.getData().tx, y: target.getData().ty}});
+                IO.to(socketid).emit('player-attack-melee', {id: _id, target: {x: target.getData().tx, y: target.getData().ty}, damage});
             }
         }
-        this.engageInCombat();
-        var damage = combatTools.calcPlayerDamage(this, target);
-        var damageDealt = target.takeDamage(this, damage); //this is for further use in lifesteal etc
+
+        var damageDealt = target.takeDamage(this, damage.value); //this is for further use in lifesteal etc
         var damageStolen = Math.floor(damageDealt * this._.lifeSteal);
         this.healSelf(damageStolen);
     };

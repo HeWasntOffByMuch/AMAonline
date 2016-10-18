@@ -35,6 +35,8 @@ TO DO:
 
 - repopulate equipment properly (recreate objects to at least use instanceof) no.
 
+- adding skill and eq applied bonuses won't work in javascript. gotta round or something
+
 CLIENTSIDE:
 
 - write client entities - DONE

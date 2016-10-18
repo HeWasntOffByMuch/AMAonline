@@ -1,3 +1,5 @@
+var enums = require('./enums.js');
+
 var combatDefaults = {
 	evasionCap: 0.3,
 	evasionDamage: 0,
@@ -17,6 +19,7 @@ module.exports = {
 	},
 	calcPlayerDamage: function(attacker, target) {
 		var attackerEq = attacker.getEquipment();
+		var damageEffects = [];
 		//limits damage disparity to 1000
 		var baseDamage = Math.random() * (attackerEq.primary.contents[0][0].damageMax - attackerEq.primary.contents[0][0].damageMin) + attackerEq.primary.contents[0][0].damageMin;
 		var evasionChance = Math.min((target._.evasionRating- attacker._.accuracyRating) / 1000, combatDefaults.evasionCap);
@@ -24,25 +27,34 @@ module.exports = {
 		var blockChance = Math.min((target._.blockRating- attacker._.accuracyRating) / 1000, combatDefaults.blockCap);
 		// console.log('e', evasionChance, 'p', parryChance, 'b', blockChance);
 		var damage = baseDamage * attacker._.damageMod;
-        if (Math.random() < evasionChance) {
-            damage = Math.round(baseDamage * combatDefaults.evasionDamage);
-        } else if (Math.random() < parryChance) {
-            damage = Math.round(baseDamage * combatDefaults.parryDamage);
-        } else if (Math.random() < blockChance) {
-            damage = Math.round(baseDamage * combatDefaults.blockDamage);
-        }
-        //critical hits
-        var critChance = attacker._.critChance;
-        var critDamage = attacker._.critDamage;
-        if(Math.random() < critChance){
-        	damage *= critDamage;
-        }
 
-        //target defense
-        //add armor efficiency mechanic
-        damage -= target._.physicalResistance;
+		if (Math.random() < evasionChance) {
+				damage = Math.round(baseDamage * combatDefaults.evasionDamage);
+				damageEffects.push(enums.damageEffect.EVADED);
+		} else if (Math.random() < parryChance) {
+				damage = Math.round(baseDamage * combatDefaults.parryDamage);
+			damageEffects.push(enums.damageEffect.PARRIED);
+		} else if (Math.random() < blockChance) {
+			damage = Math.round(baseDamage * combatDefaults.blockDamage);
+			damageEffects.push(enums.damageEffect.BLOCKED);
+		} else {
+			damageEffects.push(enums.damageEffect.NORMAL);
+		}
 
-		return (damage>=0)?Math.round(damage):0;
+		//critical hits
+		var critChance = attacker._.critChance;
+		var critDamage = attacker._.critDamage;
+		if(Math.random() < critChance){
+			damage *= critDamage;
+			damageEffects.push(enums.damageEffect.CRITICAL);
+		}
+
+		//target defense
+		//add armor efficiency mechanic
+		damage -= target._.physicalResistance;
+		damage = (damage>=0)?Math.round(damage):0;
+
+		return {value: damage, effect: damageEffects};
 	},
 	calcMobDamage: function(attacker, target) {
 		var attackerEq = attacker.getEquipment();
