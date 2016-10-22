@@ -9,15 +9,21 @@ TO DO:
 ? make persistent after restart ? - NO
 - moving entities between containers - DONE
 - moving inside containers - DONE
-[ !BUG ] - serverside persistent collision boxes ?? figure out how to reproduce - DONE
 [ !BUG ] - ASTAR BLOCKING SERVER - DONE.
 [ !BUG ] - tiles arent being loaded when you log in on farther chunks(x > 1) - DONE
 - port range combat - DONE
 - fix astar on player conrners. - DONE
 
+[ !BUG ] - serverside persistent collision boxes ?? figure out how to reproduce
+			- reproduce: player moves when mob kills him.
+			- DONE: - cleared player moveQ on death
+					- set moving to false
+					- dead players cant que moves.
 
 
-- healthMAx doesnt increase until after character recreation
+- healthMax doesnt increase until after character recreation
+	-DONE: typo 'maxHealth' instead of 'healthMax'
+
 - start thinking about characted progression
 
 

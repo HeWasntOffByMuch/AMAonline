@@ -223,6 +223,10 @@ module.exports = function Player(options) {
             }
     };
     this.queueMove = function(dx, dy) {
+        if(isDead){
+            console.log('dead cannot walk this earth. yet')
+            return;
+        }
         dx = Math.sign(dx);
         dy = Math.sign(dy);
         if((!Math.abs(dx) && Math.abs(dy)) || (Math.abs(dx) && !Math.abs(dy)) ){ // XOR
@@ -351,6 +355,7 @@ module.exports = function Player(options) {
         return affectedMobs;
     };
     this.fireball = function(damage, target) {
+        if(isDead) return;
         damage = damage * this._.offensiveInstant;
         if(target && !damage.isNan){
             target.takeDamage(this, damage)
@@ -366,6 +371,7 @@ module.exports = function Player(options) {
         }
     };
     this.strongProjectile = function(damage, target) {
+        if(isDead) return;
         if(target && !damage.isNan){
             target.takeDamage(this, damage)
 
@@ -380,6 +386,7 @@ module.exports = function Player(options) {
         }
     };
     this.groundSmash = function(damage) {
+        if(isDead) return;
         var areaFunction = function(units) { //attacks units around player
             var affectedUnits = {};
             for(var id in units){
@@ -397,6 +404,7 @@ module.exports = function Player(options) {
         this.aoeAttack(areaFunction, damage, options);
     };
     this.magicWave = function(damage) {
+        if(isDead) return;
         var areaFunction = function(units) { //attacks units around player
             var range = 5;
             var affectedUnits = {};
@@ -532,7 +540,11 @@ module.exports = function Player(options) {
     this.die = function(killer) {
         isDead = true;
         inCombat = false;
+        moveQ.clearQueue();
+        moving = false;
+
         timeOfDeath = new Date().getTime();
+
         map.freeSpot(tx, ty);
         deathHistory.push({killedBy: killer.getData().name, date: new Date().getTime()});
         IO.to(sId).emit('you-have-died', {});
