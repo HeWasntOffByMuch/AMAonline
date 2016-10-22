@@ -197,7 +197,7 @@ skillToStatisticTable = {
 
 		},
 		healthPool: {
-			maxHealth: 10
+			healthMax: 10
 		}
 	}
 };

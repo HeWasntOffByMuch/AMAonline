@@ -2,8 +2,9 @@ module.exports = EntityManager;
 var entityDefaults = {
     defaultDecayTime: 240*1000
 };
-function Entity(id, x, y, cx, cy, type, name, contents, decay_time, is_decaying) {
+function Entity(id, x, y, cx, cy, type, name, contents, decay_time, is_decaying, gonerId) {
     this.id = id;
+    this.gonerId = gonerId;
     this.contents = contents || {};
     this.x = x;
     this.y = y;
@@ -28,21 +29,20 @@ function EntityManager(gameState) {
                                 [IFAC.createWeapon(9) , IFAC.createWeapon(5) , IFAC.createWeapon(6)]
                             ];
         var emptyContents = [
-                                [0, 0, 0, 0, 0],
+                                [IFAC.createItem(4), 0, 0, 0, 0],
                                 [0, 0, 0, 0, 0],
                                 [0, 0, 0, 0, 0],
                                 [0, 0, 0, 0, 0]
-                            ]                    
+                            ];
         this.createContainer(45, 33, 'Trash Bag', chestContents);
         this.createContainer(47, 33, 'Trash Bag', emptyContents);
     };
 
-    this.createCorpse = function(x, y, name, contents, decay_time) {
+    this.createCorpse = function(options) {
         var id = curId++;
-        var cx = Math.floor(x/gameState.chunkSize.x);
-        var cy = Math.floor(y/gameState.chunkSize.y);
-        var e = new Entity(id, x, y, cx, cy, 'corpse', name, contents, decay_time, true);
-        allEntities[id] = e;
+        var cx = Math.floor(options.x/gameState.chunkSize.x);
+        var cy = Math.floor(options.y/gameState.chunkSize.y);
+        allEntities[id] = new Entity(id, options.x, options.y, cx, cy, 'corpse', options.name, options.contents, options.decayTime, true, options.gonerId);
         MAP.getChunk(cx, cy).addEntity(id, allEntities[id]);
     };
 

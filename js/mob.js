@@ -295,13 +295,13 @@ module.exports = function Mob(gameState, id, spawn_x, spawn_y, name, experience,
 		target = null;
 		this.dropExperience(killer);
 		map.freeSpot(tx, ty);
-		ENTMAN.createCorpse(tx, ty, name + 'Dead', loot, 60000);
+		ENTMAN.createCorpse({x: tx, y: ty, name: name + 'Dead', contents: loot, decayTime: 60000});
 		IO.emit('mob-death', {id: _id});
 	};
     this.heal = function(val) {
         healthCur += Math.min(val, healthMax - healthCur);
     };
-    this.resurrect = function() {
+    this.getResurrected = function() {
     	//cant resurrect a mob
     };
 }

@@ -41,11 +41,12 @@ module.exports = {
 
   objType : {
     PLAYER: 0,
-    MOB: 1
+    MOB: 1,
+    ENTITY: 2
   },
   valueType : {
     STATIC: 0,
-    PERCENT: 1,
+    PERCENT: 1
   },
 
   itemType : {
