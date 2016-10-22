@@ -29,7 +29,7 @@ function EntityManager(gameState) {
                                 [IFAC.createWeapon(9) , IFAC.createWeapon(5) , IFAC.createWeapon(6)]
                             ];
         var emptyContents = [
-                                [IFAC.createItem(4), 0, 0, 0, 0],
+                                [IFAC.createItem(4), IFAC.createArmor(2), 0, 0, 0],
                                 [0, 0, 0, 0, 0],
                                 [0, 0, 0, 0, 0],
                                 [0, 0, 0, 0, 0]
