@@ -37,9 +37,9 @@ TO DO:
 
 - mob run away on low hp?
 
-- some bug remaining with lingering collisions on server
-
 - repopulate equipment properly (recreate objects to at least use instanceof) no.
+
+- remove logic from server.js socket handlers.
 
 CLIENTSIDE:
 
@@ -52,6 +52,8 @@ CLIENTSIDE:
 - write exp popups +  broadcasts - DONE
 - add entity handlers onclick etc. - DONE
 - unknown issue with number popup spam - DONE (peristent keys in server chunks)
+- globalFakeItem bug. is movable. -fixed
+- fix gui bug with s/sw window resize -fixed on github
 
 
 
@@ -65,11 +67,6 @@ CLIENTSIDE:
 	- short - DONE
 	- attack -DONE
 	- projectile etc. - DONE
-
-
-- fix gui bug with s/sw window resize -fixed on github
-
-- globalFakeItem bug. is movable. -fixed
 
 - window sticks to nothing
 
