@@ -144,7 +144,7 @@ Scorpion.prototype.constructor = Scorpion;
 
 
 function Dummy(gameState, id, spawn_x, spawn_y) {
-	var healthMax = 9999999;
+	var healthMax = 133700;
 
 
   Mob.call(this, gameState, id, spawn_x, spawn_y, 'Dummy', 0, healthMax);

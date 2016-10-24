@@ -15,7 +15,6 @@ function Entity(id, x, y, cx, cy, type, name, contents, decay_time, is_decaying,
     this.creationTime = new Date().getTime();
     this.decayTime = decay_time || entityDefaults.defaultDecayTime;
     this.isDecaying = is_decaying;
-
 }
 function EntityManager(gameState) {
     var curId = 0; //non persistent objects
@@ -30,7 +29,7 @@ function EntityManager(gameState) {
                             ];
         var emptyContents = [
                                 [IFAC.createItem(4), IFAC.createArmor(2), 0, 0, 0],
-                                [0, 0, 0, 0, 0],
+                                [IFAC.createItem(7), IFAC.createItem(7), 0, 0, 0],
                                 [0, 0, 0, 0, 0],
                                 [0, 0, 0, 0, 0]
                             ];
@@ -54,6 +53,13 @@ function EntityManager(gameState) {
         allEntities[id] = e;
         MAP.getChunk(cx, cy).addEntity(id, allEntities[id]);
     };
+    this.createSymbol= function(options) { // this is for transmutation symbols.
+        var id = curId++;
+        var cx = Math.floor(options.x/gameState.chunkSize.x);
+        var cy = Math.floor(options.y/gameState.chunkSize.y);
+        allEntities[id] = new Entity(id, options.x, options.y, cx, cy, 'symbol', options.name, options.contents, options.decayTime, true);
+        MAP.getChunk(cx, cy).addEntity(id, allEntities[id]);
+    }
 
     this.removeEntity = function(_id) {
         MAP.getChunk(allEntities[_id].cx, allEntities[_id].cy).removeEntity(_id);

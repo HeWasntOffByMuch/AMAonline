@@ -334,6 +334,17 @@ var itemTemplates = {
         desc: "Poke - heal cancer, poke - heal anything",
         usesLeft: 1,
         useFunction: 'digGround'
+    },
+    7: {
+        name: 'Basic Symbol',
+        stackable: false,
+        quantity: 1,
+        type: 'non-consumable',
+        weight: 800,
+        desc: "Place a basic alchemy symbol.",
+        target: 'ground',
+        usesLeft: 1,
+        useFunction: 'placeSymbol'
     }
 };
 

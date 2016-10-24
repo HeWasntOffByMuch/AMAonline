@@ -372,7 +372,7 @@ module.exports = function Player(options) {
     };
     this.strongProjectile = function(damage, target) {
         if(isDead) return;
-        if(target && !damage.isNan){
+        if(target && !damage.isNan && target !== this){
             target.takeDamage(this, damage)
 
             var options = {
@@ -385,6 +385,12 @@ module.exports = function Player(options) {
             this.emitSpellEffect(options);
         }
     };
+    this.placeSymbol = (value, target) => {
+        if(target.hasOwnProperty('getData')) {
+            target = {x: target.getData().x, y: target.getData().y}
+        }
+        ENTMAN.createSymbol({x: target.x, y: target.y, name: 'Basic Symbol', decayTime: 8000});
+    }
     this.groundSmash = function(damage) {
         if(isDead) return;
         var areaFunction = function(units) { //attacks units around player
@@ -460,32 +466,18 @@ module.exports = function Player(options) {
     };
     // THOSE ARE USABLE SKILL/ITEM FUNCTIONS
     this.giveMana = function(val, target) {
-        if(target){
-            target.restoreMana(val);
-        }
-        else{
-            this.restoreMana(val);
-        }
+        target.restoreMana(val);
     };
     this.heal = function(val, target) { //heal self or target
         var healAmount = Math.floor(val * this._.healingMagic);
 
-        if(target){
-            target.getHealed(healAmount);
-            var options = {
-                name: 'healUnit',
-                x: target.getData().tx,
-                y: target.getData().ty
-            };
-        }
-        else{
-            this.healSelf(healAmount);
-            var options = {
-                name: 'healUnit',
-                x: tx,
-                y: ty
-            };
-        }
+        target.getHealed(healAmount);
+        var options = {
+            name: 'healUnit',
+            x: target.getData().tx,
+            y: target.getData().ty
+        };
+
         this.emitSpellEffect(options)
     };
     this.healSelf = function(val) {
@@ -495,11 +487,11 @@ module.exports = function Player(options) {
         healthCur += Math.min(val, this._.healthMax - healthCur);
     };
     this.resurrect = function(percent, target) { //cannot use on yourself
-        if(target && target.isDead()){
+        if(target && target !== this && target.isDead()){
             target.getResurrected(percent);
         }
         else{
-
+            IO.to(sId).emit('server-message', {message: 'That player already respawned. Too bad for him.', color: 'yellow'});
         }
     };
     this.getResurrected = function(percent) {
@@ -596,17 +588,15 @@ module.exports = function Player(options) {
                     else
                         return;
                 }
-                if(!item.useValue)
-                    this[item.useFunction]();
-                else
-                    this[item.useFunction](item.useValue);
+
+                this[item.useFunction](item.useValue, this);
             }
         }
     };
     this.removeItem = function() {
         //break up useItemOnSelf().
     };
-    this.useItemOnTarget = function(data) { //need distance checks and item needs range property
+    this.useItemOnTarget = function(data) { //need distance checks and item needs range property/split into separate functions
         console.log('player using item on target');
         var usedOn;
         var item = equipment[data.id].contents[data.x][data.y];
@@ -623,6 +613,15 @@ module.exports = function Player(options) {
                 return;
             }
             usedOn = playerTarget;
+        }
+        else if(data.targetType === enums.objType.GROUND)  {
+            if(data.targetPos && !MAP.isValid(data.targetPos.x, data.targetPos.y))  {
+                return;
+            }
+            if(item.target !== 'ground') {
+                return;
+            }
+            usedOn = data.targetPos;
         }
         if(item && usedOn && item.useFunction){
             if(!this.checkItemRange(item, usedOn))
