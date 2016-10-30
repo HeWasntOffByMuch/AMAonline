@@ -276,7 +276,6 @@ var itemTemplates = {
 		quantity: 1,
 		type: 'consumable',
         desc: 'Le Potato',
-        usesLeft: 1,
         weight: 180,
         useFunction: 'heal',
         useValue: 15
@@ -288,7 +287,6 @@ var itemTemplates = {
         type: 'consumable',
         weight: 80,
         desc: 'For the soul.',
-        usesLeft: 1,
         useFunction: 'giveMana',
         useValue: 200
     },
@@ -299,7 +297,6 @@ var itemTemplates = {
         type: 'consumable',
         weight: 80,
         desc: 'For overall well-being',
-        usesLeft: 1,
         useFunction: 'heal',
         useValue: 20
     },
@@ -310,7 +307,6 @@ var itemTemplates = {
         type: 'consumable',
         weight: 80,
         desc: "I'm back!",
-        usesLeft: 1,
         useFunction: 'resurrect',
         useValue: 0.1
     },
@@ -321,7 +317,6 @@ var itemTemplates = {
         type: 'non-consumable',
         weight: 800,
         desc: "Poke - heal cancer, poke - heal anything",
-        usesLeft: 1,
         useFunction: 'heal',
         useValue: 2000
     },
@@ -332,7 +327,6 @@ var itemTemplates = {
         type: 'non-consumable',
         weight: 800,
         desc: "Poke - heal cancer, poke - heal anything",
-        usesLeft: 1,
         useFunction: 'digGround'
     },
     7: {
@@ -343,8 +337,17 @@ var itemTemplates = {
         weight: 800,
         desc: "Place a basic alchemy symbol.",
         target: 'ground',
-        usesLeft: 1,
         useFunction: 'placeSymbol'
+    },
+    8: {
+        name: 'Pumpkin Seed',
+        stackable: false,
+        quantity: 1,
+        type: 'non-consumable',
+        weight: 800,
+        desc: "Place a spooky decoration.",
+        target: 'ground',
+        useFunction: 'placePumpkin'
     }
 };
 
@@ -356,7 +359,6 @@ var skillTemplates = {
         type: 'skill',
         weight: 80,
         desc: "Leash out two striking fast attacks!",
-        usesLeft: 1,
         useFunction: 'quickSlashes',
         manaCost: 50,
         range: 1.5
@@ -403,7 +405,6 @@ var skillTemplates = {
         type: 'skill',
         weight: 80,
         desc: "Spew magical energy in front of you",
-        usesLeft: 1,
         useValue: 45,
         useFunction: 'magicWave',
         manaCost: 5
@@ -415,7 +416,6 @@ var skillTemplates = {
         type: 'skill',
         weight: 80,
         desc: "Shake the ground around you, Skadoosh!",
-        usesLeft: 1,
         useValue: 10,
         useFunction: 'groundSmash',
         manaCost: 5
@@ -427,7 +427,6 @@ var skillTemplates = {
         type: 'skill',
         weight: 80,
         desc: "Throw a blazing turd.",
-        usesLeft: 1,
         useValue: 15,
         useFunction: 'fireball',
         manaCost: 2
@@ -439,7 +438,6 @@ var skillTemplates = {
         type: 'skill',
         weight: 80,
         desc: "O żesz chuj.",
-        usesLeft: 1,
         useValue: 50000,
         useFunction: 'strongProjectile',
         manaCost: 0

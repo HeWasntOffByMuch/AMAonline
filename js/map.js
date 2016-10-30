@@ -208,10 +208,10 @@ function loadCollisions(fs, mapDetails, callback) {
             collisions[i][j] = 0;
         }
     }
-    fs.readFile('map/map.json', 'utf-8', function(err, data) {
+    fs.readFile('map/map_rework.json', 'utf-8', function(err, data) {
         if (err) callback(err, null);
         data = eval("(" + data + ")");
-    	var data1 = data.layers[4]; // those u can shoot over. 0.5 value
+    	var data1 = data.layers[3]; // those u can shoot over. 0.5 value
         var x, y, h, w, i, j, count=0;
         for (var o in data1.objects) {
             h = Math.round(data1.objects[o].height / gh);
@@ -225,7 +225,7 @@ function loadCollisions(fs, mapDetails, callback) {
                 }
             }
         }
-        var data2 = data.layers[5]; //those you can not shoot over. val = 1;
+        var data2 = data.layers[4]; //those you can not shoot over. val = 1;
         for (var o in data2.objects) {
             h = Math.round(data2.objects[o].height / gh);
             w = Math.round(data2.objects[o].width / gh);
@@ -245,10 +245,10 @@ function loadSpawners(fs, gh, callback) {
     var spawners = [];
     var count = 0;
 
-    fs.readFile('map/map.json', 'utf-8', function(err, data) {
+    fs.readFile('map/map_rework.json', 'utf-8', function(err, data) {
         if (err) callback(err, null);
         data = eval("(" + data + ")");
-        data = data.layers[6]; // layer with mobs
+        data = data.layers[5]; // layer with mobs
         var x, y, h, w, i, j, count=0;
         for (var o in data.objects) {
             x = Math.round(data.objects[o].x / gh);
@@ -260,7 +260,7 @@ function loadSpawners(fs, gh, callback) {
     });
 }
 function loadTiles(fs, gh, callback) {
-    fs.readFile('map/map.json', 'utf-8', function(err, data) {
+    fs.readFile('map/map_rework.json', 'utf-8', function(err, data) {
     	if(err) callback(err);
     	data = eval("(" + data + ")");
     	var foreground = [];

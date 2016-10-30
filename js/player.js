@@ -374,6 +374,7 @@ module.exports = function Player(options) {
         if(isDead) return;
         if(target && !damage.isNan && target !== this){
             target.takeDamage(this, damage)
+            this.engageInCombat();
 
             var options = {
                 name: 'strongProjectile',
@@ -390,7 +391,13 @@ module.exports = function Player(options) {
             target = {x: target.getData().x, y: target.getData().y}
         }
         ENTMAN.createSymbol({x: target.x, y: target.y, name: 'Basic Symbol', decayTime: 8000});
-    }
+    };
+    this.placePumpkin = (value, target) => {
+        if(target.hasOwnProperty('getData')) {
+            target = {x: target.getData().x, y: target.getData().y}
+        }
+        ENTMAN.createPumpkin({x: target.x, y: target.y, name: 'Pumpkin', decayTime: 300000});
+    };
     this.groundSmash = function(damage) {
         if(isDead) return;
         var areaFunction = function(units) { //attacks units around player
@@ -637,7 +644,7 @@ module.exports = function Player(options) {
         }
     };
     this.removeUsesFromConsumable = function(from, item) {
-        if(item.type == 'consumable' && --item.usesLeft <= 0){
+        if(item.type == 'consumable' && --item.quantity <= 0){
             IO.to(sId).emit('player-used-item', {parentId: from.id, id: item.id}); //add uses left and handle on client
             equipment[from.id].contents[from.x][from.y] = 0; // removes item
         }
@@ -664,7 +671,7 @@ module.exports = function Player(options) {
     };
     this.moveInventoryItem = function(from, to) { // retarded but works for now. this is a request but handles all item moving?
         var item = equipment[from.id].contents[from.x][from.y];
-        if(!equipment[to.id].isSlotEmpty(to.x, to.y) || item == equipment[to.id].contents[to.x][to.y]) // move item into self
+        if(!equipment[to.id].isSlotEmpty(to.x, to.y) || item === equipment[to.id].contents[to.x][to.y]) // move item into self
             return;
 
         this.addItem(item, to);

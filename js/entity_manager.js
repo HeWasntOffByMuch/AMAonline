@@ -29,12 +29,12 @@ function EntityManager(gameState) {
                             ];
         var emptyContents = [
                                 [IFAC.createItem(4), IFAC.createArmor(2), 0, 0, 0],
-                                [IFAC.createItem(7), IFAC.createItem(7), 0, 0, 0],
+                                [IFAC.createItem(7), IFAC.createItem(8), 0, 0, 0],
                                 [0, 0, 0, 0, 0],
                                 [0, 0, 0, 0, 0]
                             ];
-        this.createContainer(45, 33, 'Trash Bag', chestContents);
-        this.createContainer(47, 33, 'Trash Bag', emptyContents);
+        this.createContainer(54, 52, 'Chest', chestContents);
+        this.createContainer(56, 52, 'Chest', emptyContents);
     };
 
     this.createCorpse = function(options) {
@@ -59,7 +59,14 @@ function EntityManager(gameState) {
         var cy = Math.floor(options.y/gameState.chunkSize.y);
         allEntities[id] = new Entity(id, options.x, options.y, cx, cy, 'symbol', options.name, options.contents, options.decayTime, true);
         MAP.getChunk(cx, cy).addEntity(id, allEntities[id]);
-    }
+    };
+    this.createPumpkin= function(options) { // this is for transmutation symbols.
+        var id = curId++;
+        var cx = Math.floor(options.x/gameState.chunkSize.x);
+        var cy = Math.floor(options.y/gameState.chunkSize.y);
+        allEntities[id] = new Entity(id, options.x, options.y, cx, cy, 'pumpkin', options.name, options.contents, options.decayTime, true);
+        MAP.getChunk(cx, cy).addEntity(id, allEntities[id]);
+    };
 
     this.removeEntity = function(_id) {
         MAP.getChunk(allEntities[_id].cx, allEntities[_id].cy).removeEntity(_id);
