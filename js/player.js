@@ -243,7 +243,7 @@ module.exports = function Player(options) {
         map.occupySpot(tx, ty);
         moving = true;
     };
-    this.setPosition = function(spawn_x, spawn_y) { // [BUG] for respawn and teleports and what not // possible location of persistant collision box here !!!
+    this.setPosition = function(spawn_x, spawn_y) {
         x = spawn_x;
         y = spawn_y;
         tx = spawn_x;
@@ -712,7 +712,7 @@ module.exports = function Player(options) {
 
         if(equipment[to.id].isSlotEmpty(to.x, to.y)){
             delete ENTMAN.getEntity(from.id).contents[from.pos]; // modifies entity.
-            equipment[to.id].addItem(item, to.x, to.y);
+            this.addItem(item, to);
         }
         else{
             // obviously need client correction when this happens
