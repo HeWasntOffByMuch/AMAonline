@@ -52,7 +52,34 @@ function ItemFactory(){
 }
 
 module.exports = ItemFactory;
-
+// sample weapons
+// {
+//     name: 'Some Bow',
+//     stackable: false,
+//     quantity: 1,
+//     type: 'ranged',
+//     level: 1,
+//     desc: 'Arrows from this bow cannot be intercepted.',
+//     damageMin: 7,
+//     damageMax: 15,
+//     range: 7,
+//     attackCooldown: 2000,
+//     weight: 1200
+// }
+// {
+//     name: 'Some Sword',
+//     stackable: false,
+//     quantity: 1,
+//     type: 'melee',
+//     rarity: 'legendary',
+//     level: 30,
+//     desc: 'You dare to impugn my honor.',
+//     damageMin: 26,
+//     damageMax: 49,
+//     range: 1.5,
+//     attackCooldown: 2200,
+//     weight: 1800
+// }
 var weaponTemplates = {
   1: {
     name: 'Hunting Knife',
@@ -348,6 +375,16 @@ var itemTemplates = {
         desc: "Place a spooky decoration.",
         target: 'ground',
         useFunction: 'placePumpkin'
+    },
+    9: {
+        name: 'Stone Wall',
+        stackable: false,
+        quantity: 1,
+        type: 'non-consumable',
+        weight: 800,
+        desc: "Place a stone blockade.",
+        target: 'ground',
+        useFunction: 'placeBlockingEntity'
     }
 };
 

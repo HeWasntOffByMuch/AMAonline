@@ -398,6 +398,14 @@ module.exports = function Player(options) {
         }
         ENTMAN.createPumpkin({x: target.x, y: target.y, name: 'Pumpkin', decayTime: 300000});
     };
+    this.placeBlockingEntity = (value, target) => {
+        if(target.hasOwnProperty('getData')) {
+            target = {x: target.getData().x, y: target.getData().y}
+        }
+        if(map.isValid(target.x, target.y)) {
+            ENTMAN.createBlockingEntity({x: target.x, y: target.y, name: 'Stone Wall', decayTime: 15000});
+        }
+    };
     this.groundSmash = function(damage) {
         if(isDead) return;
         var areaFunction = function(units) { //attacks units around player

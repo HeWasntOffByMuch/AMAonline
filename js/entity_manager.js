@@ -2,19 +2,20 @@ module.exports = EntityManager;
 var entityDefaults = {
     defaultDecayTime: 240*1000
 };
-function Entity(id, x, y, cx, cy, type, name, contents, decay_time, is_decaying, gonerId) {
-    this.id = id;
-    this.gonerId = gonerId;
-    this.contents = contents || {};
-    this.x = x;
-    this.y = y;
-    this.cx = cx;
-    this.cy = cy;
-    this.type = type;
-    this.name = name || 'default name';
+function Entity(options) {
+    this.id = options.id;
+    this.gonerId = options.gonerId;
+    this.contents = options.contents || {};
+    this.x = options.x;
+    this.y = options.y;
+    this.cx = options.cx;
+    this.cy = options.cy;
+    this.type = options.type;
+    this.blocking = options.blocking;
+    this.name = options.name || 'default name';
     this.creationTime = new Date().getTime();
-    this.decayTime = decay_time || entityDefaults.defaultDecayTime;
-    this.isDecaying = is_decaying;
+    this.decayTime = options.decayTime || entityDefaults.defaultDecayTime;
+    this.isDecaying = options.isDecaying;
 }
 function EntityManager(gameState) {
     var curId = 0; //non persistent objects
@@ -30,26 +31,26 @@ function EntityManager(gameState) {
         var emptyContents = [
                                 [IFAC.createItem(4), IFAC.createArmor(2), 0, 0, 0],
                                 [IFAC.createItem(7), IFAC.createItem(8), 0, 0, 0],
-                                [0, 0, 0, 0, 0],
+                                [IFAC.createItem(9), 0, 0, 0, 0],
                                 [0, 0, 0, 0, 0]
                             ];
-        this.createContainer(54, 52, 'Chest', chestContents);
-        this.createContainer(56, 52, 'Chest', emptyContents);
+        this.createContainer({x: 54, y: 52, name: 'Chest', contents: chestContents});
+        this.createContainer({x: 56, y: 52, name: 'Chest', contents: emptyContents});
     };
 
     this.createCorpse = function(options) {
         var id = curId++;
         var cx = Math.floor(options.x/gameState.chunkSize.x);
         var cy = Math.floor(options.y/gameState.chunkSize.y);
-        allEntities[id] = new Entity(id, options.x, options.y, cx, cy, 'corpse', options.name, options.contents, options.decayTime, true, options.gonerId);
+        allEntities[id] = new Entity(Object.assign(options, {id, cx, cy, type: 'corpse', isDecaying: true}));
         MAP.getChunk(cx, cy).addEntity(id, allEntities[id]);
     };
 
-    this.createContainer = function(x, y, name, contents) {
+    this.createContainer = function(options) {
         var id = curId++;
-        var cx = Math.floor(x/gameState.chunkSize.x);
-        var cy = Math.floor(y/gameState.chunkSize.y);
-        var e = new Entity(id, x, y, cx, cy, 'container', name, contents, null, false);
+        var cx = Math.floor(options.x/gameState.chunkSize.x);
+        var cy = Math.floor(options.y/gameState.chunkSize.y);
+        var e = new Entity(Object.assign(options, {id, cx, cy, type: 'container', decayTime: null, isDecaying: false}));
         allEntities[id] = e;
         MAP.getChunk(cx, cy).addEntity(id, allEntities[id]);
     };
@@ -57,7 +58,7 @@ function EntityManager(gameState) {
         var id = curId++;
         var cx = Math.floor(options.x/gameState.chunkSize.x);
         var cy = Math.floor(options.y/gameState.chunkSize.y);
-        allEntities[id] = new Entity(id, options.x, options.y, cx, cy, 'symbol', options.name, options.contents, options.decayTime, true);
+        allEntities[id] = new Entity(Object.assign(options, {id, cx, cy, type: 'symbol', isDecaying: true}));
         MAP.getChunk(cx, cy).addEntity(id, allEntities[id]);
     };
     this.createPumpkin= function(options) { // this is for transmutation symbols.
@@ -67,9 +68,21 @@ function EntityManager(gameState) {
         allEntities[id] = new Entity(id, options.x, options.y, cx, cy, 'pumpkin', options.name, options.contents, options.decayTime, true);
         MAP.getChunk(cx, cy).addEntity(id, allEntities[id]);
     };
+    this.createBlockingEntity= function(options) {
+        var id = curId++;
+        var cx = Math.floor(options.x/gameState.chunkSize.x);
+        var cy = Math.floor(options.y/gameState.chunkSize.y);
+        allEntities[id] = new Entity(Object.assign(options, {id, cx, cy, type: 'blockade', isDecaying: true, blocking: true}));
+        MAP.getChunk(cx, cy).addEntity(id, allEntities[id]);
+        console.log(options)
+        MAP.occupySpot(options.x, options.y);
+    };
 
     this.removeEntity = function(_id) {
         MAP.getChunk(allEntities[_id].cx, allEntities[_id].cy).removeEntity(_id);
+        if(allEntities[_id].blocking) {
+            MAP.freeSpot(allEntities[_id].x, allEntities[_id].y);
+        }
         delete allEntities[_id];
     };
     this.update = function() {
