@@ -62,11 +62,11 @@ function EntityManager(gameState) {
         MAP.getChunk(cx, cy).addEntity(id, allEntities[id]);
     };
     this.createPumpkin= function(options) { // this is for transmutation symbols.
+        console.log(options)
         var id = curId++;
         var cx = Math.floor(options.x/gameState.chunkSize.x);
         var cy = Math.floor(options.y/gameState.chunkSize.y);
-        allEntities[id] = new Entity(id, options.x, options.y, cx, cy, 'pumpkin', options.name, options.contents, options.decayTime, true);
-        MAP.getChunk(cx, cy).addEntity(id, allEntities[id]);
+        allEntities[id] = new Entity(Object.assign(options, {id, cx, cy, type: 'symbol', isDecaying: true}));
     };
     this.createBlockingEntity= function(options) {
         var id = curId++;
@@ -75,7 +75,7 @@ function EntityManager(gameState) {
         allEntities[id] = new Entity(Object.assign(options, {id, cx, cy, type: 'blockade', isDecaying: true, blocking: true}));
         MAP.getChunk(cx, cy).addEntity(id, allEntities[id]);
         console.log(options)
-        MAP.occupySpot(options.x, options.y);
+        MAP.occupySpotBlocking(options.x, options.y);
     };
 
     this.removeEntity = function(_id) {

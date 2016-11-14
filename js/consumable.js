@@ -5,7 +5,6 @@ Consumable.prototype.constructor = Consumable;
 function Consumable(data){
 	Item.call(this, data);
 	this.desc = data.desc;
-	this.usesLeft = data.usesLeft;
 	this.useFunction = data.useFunction;
 	this.useValue = data.useValue;
 }

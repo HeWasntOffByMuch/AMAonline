@@ -481,7 +481,10 @@ module.exports = function Player(options) {
     };
     // THOSE ARE USABLE SKILL/ITEM FUNCTIONS
     this.giveMana = function(val, target) {
-        target.restoreMana(val);
+        if(target.restoreMana !== undefined) {
+            console.log(`restoring someone's mana`)
+            target.restoreMana(val);
+        }
     };
     this.heal = function(val, target) { //heal self or target
         var healAmount = Math.floor(val * this._.healingMagic);
@@ -608,9 +611,6 @@ module.exports = function Player(options) {
             }
         }
     };
-    this.removeItem = function() {
-        //break up useItemOnSelf().
-    };
     this.useItemOnTarget = function(data) { //need distance checks and item needs range property/split into separate functions
         console.log('player using item on target');
         var usedOn;
@@ -652,9 +652,10 @@ module.exports = function Player(options) {
         }
     };
     this.removeUsesFromConsumable = function(from, item) {
-        if(item.type == 'consumable' && --item.quantity <= 0){
+        if(item.type == 'consumable'){
             IO.to(sId).emit('player-used-item', {parentId: from.id, id: item.id}); //add uses left and handle on client
-            equipment[from.id].contents[from.x][from.y] = 0; // removes item
+            if(--item.quantity <= 0)
+                equipment[from.id].contents[from.x][from.y] = 0; // removes item
         }
     };
     this.removeItem = function(item, from) {
@@ -685,6 +686,13 @@ module.exports = function Player(options) {
         this.addItem(item, to);
         this.removeItem(item, from);
     };
+    this.stackInventoryItems = (from, to) => {
+        var item1 = equipment[from.id].contents[from.x][from.y];
+        var item2 = equipment[to.id].contents[to.x][to.y];
+
+        item2.quantity += item1.quantity;
+        equipment[from.id].removeItem(from.x, from.y);
+    };
     this.takeItemFromContainer = function(from, to) {
         var item = ENTMAN.getEntity(from.id).contents[from.x][from.y];
 
@@ -706,26 +714,58 @@ module.exports = function Player(options) {
         }
     };
     this.moveItemInsideContainer = function(from, to) {
-        var item = ENTMAN.getEntity(from.id).contents[from.x][from.y];
+        var item1 = ENTMAN.getEntity(from.id).contents[from.x][from.y];
 
-        if(!item) return; //possibly send client message because obviously something went wrong
+        if(!item1) return; //possibly send client message because obviously something went wrong
 
         ENTMAN.getEntity(from.id).contents[from.x][from.y] = 0; // clear previous position
-        ENTMAN.getEntity(to.id).contents[to.x][to.y] = item;
+        ENTMAN.getEntity(to.id).contents[to.x][to.y] = item1;
+    };
+    this.stackItemFromContainer = (from, to) => {
+        var item1 = ENTMAN.getEntity(from.id).contents[from.x][from.y];
+        var item2 = equipment[to.id].contents[to.x][to.y];
+
+        if (item1.stackable && item1.name === item2.name) {
+            item2.quantity += item1.quantity;
+            ENTMAN.getEntity(from.id).contents[from.x][from.y] = 0;
+        }
+    };
+    this.stackItemIntoContainer = (from, to) => {
+        var item1  = equipment[from.id].contents[from.x][from.y];
+        var item2 = ENTMAN.getEntity(to.id).contents[to.x][to.y];
+
+        if (item1.stackable && item1.name === item2.name) {
+            item2.quantity += item1.quantity;
+            equipment[from.id].contents[from.x][from.y] = 0;
+        }
+    };
+    this.stackItemsInsideContainer= function(from, to) {
+        var item1 = ENTMAN.getEntity(from.id).contents[from.x][from.y];
+        var item2 = ENTMAN.getEntity(to.id).contents[to.x][to.y];
+
+        if (item1.stackable && item1.name === item2.name) {
+            item2.quantity += item1.quantity;
+            ENTMAN.getEntity(from.id).contents[from.x][from.y] = 0
+        }
     };
     this.lootEntity = function(from, to) { //missing feedback?? also for other clients
-        var item = ENTMAN.getEntity(from.id).contents[from.pos];
+        var item1 = ENTMAN.getEntity(from.id).contents[from.pos];
 
-        if(!item) return;
+        if(!item1) return;
 
         if(equipment[to.id].isSlotEmpty(to.x, to.y)){
             delete ENTMAN.getEntity(from.id).contents[from.pos]; // modifies entity.
-            this.addItem(item, to);
+            this.addItem(item1, to);
         }
         else{
-            // obviously need client correction when this happens
+1            // obviously need client correction when this happens and stack check fails
+            var item2 = equipment[to.id].contents[to.x][to.y]
+            if (item1.stackable && item1.name === item2.name) {
+                item2.quantity += item1.quantity;
+                delete ENTMAN.getEntity(from.id).contents[from.pos];
+            }
         }
-        //let other clients nearby know item is no longer there!!
+        //let other clients nearby know item is no longer there!! perhaps only one player at a time can view an inventory
     };
     this.applyEquipmentBonusesOnItemEquip = function(data) {
         if(data.type === 'function'){
