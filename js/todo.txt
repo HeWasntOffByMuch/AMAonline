@@ -37,9 +37,11 @@ TO DO:
 
 - mob run away on low hp?
 
-- repopulate equipment properly (recreate objects to at least use instanceof) no.
-
 - remove logic from server.js socket handlers.
+
+- separate manager for transmutation symbols. decouple logic from entity manager? or at 
+	least separate container for symbols within the entity manager.
+	- player updates will handle active placed symbols
 
 CLIENTSIDE:
 
@@ -54,16 +56,12 @@ CLIENTSIDE:
 - unknown issue with number popup spam - DONE (peristent keys in server chunks)
 - globalFakeItem bug. is movable. -fixed
 - fix gui bug with s/sw window resize -fixed on github
-
-
-
-
 - draw xp bar - DONE
 - right click context menu - DONE
 - write animations
     - player - DONE
 	- unit
-	- entity
+	- entity - Sortof DONE
 	- short - DONE
 	- attack -DONE
 	- projectile etc. - DONE
@@ -75,3 +73,7 @@ CLIENTSIDE:
 - start making separate modules like rpg
 
 - make separate files fith functions for skills, dont keep that in player class.
+
+- items stackign functionality done in like 75%
+	- within inventory working
+	- looting corpses working

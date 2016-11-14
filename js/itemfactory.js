@@ -21,10 +21,10 @@ function ItemFactory(){
         });
 		return new Armor(data);
 	};
-	this.createItem = function(template_num) {
+	this.createItem = function(template_num, quantity) {
         var data = Object.assign(itemTemplates[template_num], {
             id: db.newObjectId(),
-            quantity: 1
+            quantity
         });
 		return new Consumable(data);
 	};
@@ -38,12 +38,13 @@ function ItemFactory(){
 	this.createCustomItem = function() { // debug only ??
 
 	};
-    this.createGold = function() {
+    this.createCoins = function(name, min, max) {
+        const quantity = Math.ceil(Math.random() * (max - min) + min);
         var data = Object.assign({}, {
             id: db.newObjectId(),
-            name: 'Gold',
+            name,
             stackable: true,
-            quantity: 1,
+            quantity: quantity,
             type: 'gold',
             weight: 5
         });
@@ -52,7 +53,34 @@ function ItemFactory(){
 }
 
 module.exports = ItemFactory;
-
+// sample weapons
+// {
+//     name: 'Some Bow',
+//     stackable: false,
+//     quantity: 1,
+//     type: 'ranged',
+//     level: 1,
+//     desc: 'Arrows from this bow cannot be intercepted.',
+//     damageMin: 7,
+//     damageMax: 15,
+//     range: 7,
+//     attackCooldown: 2000,
+//     weight: 1200
+// }
+// {
+//     name: 'Some Sword',
+//     stackable: false,
+//     quantity: 1,
+//     type: 'melee',
+//     rarity: 'legendary',
+//     level: 30,
+//     desc: 'You dare to impugn my honor.',
+//     damageMin: 26,
+//     damageMax: 49,
+//     range: 1.5,
+//     attackCooldown: 2200,
+//     weight: 1800
+// }
 var weaponTemplates = {
   1: {
     name: 'Hunting Knife',
@@ -282,7 +310,7 @@ var itemTemplates = {
 	},
     2: {
         name: 'Mana Potion',
-        stackable: false,
+        stackable: true,
         quantity: 1,
         type: 'consumable',
         weight: 80,
@@ -292,7 +320,7 @@ var itemTemplates = {
     },
     3: {
         name: 'Health Potion',
-        stackable: false,
+        stackable: true,
         quantity: 1,
         type: 'consumable',
         weight: 80,
@@ -348,6 +376,16 @@ var itemTemplates = {
         desc: "Place a spooky decoration.",
         target: 'ground',
         useFunction: 'placePumpkin'
+    },
+    9: {
+        name: 'Stone Wall',
+        stackable: false,
+        quantity: 1,
+        type: 'non-consumable',
+        weight: 800,
+        desc: "Place a stone blockade.",
+        target: 'ground',
+        useFunction: 'placeBlockingEntity'
     }
 };
 

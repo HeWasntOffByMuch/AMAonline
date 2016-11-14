@@ -213,4 +213,28 @@ io.on('connection', function(socket) {
             player.moveItemInsideContainer(data.from, data.to);
         }
     });
+    socket.on('container-stack-inside-request', function(data) {
+        var player = game.getPlayerBySocket(socket.id);
+        if(player && !player.isDead()){
+            player.stackItemsInsideContainer(data.from, data.to);
+        }
+    });
+    socket.on('stack-items-request', function(data) {
+        var player = game.getPlayerBySocket(socket.id);
+        if(player && !player.isDead()){
+            player.stackInventoryItems(data.from, data.to);
+        }
+    });
+    socket.on('container-take-stack-request', function(data) {
+        var player = game.getPlayerBySocket(socket.id);
+        if(player && !player.isDead()){
+            player.stackItemFromContainer(data.from, data.to);
+        }
+    });
+    socket.on('container-put-stack-request', function(data) {
+        var player = game.getPlayerBySocket(socket.id);
+        if(player && !player.isDead()){
+            player.stackItemIntoContainer(data.from, data.to);
+        }
+    });
 });

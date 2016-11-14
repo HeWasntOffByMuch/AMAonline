@@ -418,6 +418,9 @@ module.exports = function Map(fs, gameState, spawnerLoadingFinished){
     this.occupySpot = function(x, y) {
         collisions[x][y] = 0.5;
     };
+    this.occupySpotBlocking = function(x, y) {
+        collisions[x][y] = 1;
+    };
     this.freeSpot = function(x, y) {
         collisions[x][y] = 0;
     };

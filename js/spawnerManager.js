@@ -79,13 +79,8 @@ function Bat(gameState, id, spawn_x, spawn_y) {
 	var exp = 3000;
 	var mobWeapon = {type: enums.weaponType.MELEE, range: 1.5, damageMin: 1, damageMax: 4};
 	var possibleLoot = {
-        0: {item: IFAC.createItem(4), dropChance: 1}, //healthPot
-        1: {item: IFAC.createItem(5), dropChance: 0.9},
-        2: {item: IFAC.createItem(3), dropChance: 0.9},
-        3: {item: IFAC.createArmor(5), dropChance: 1},
-        4: {item: IFAC.createSkill(6), dropChance: 1},
-				5: {item: IFAC.createItem(6), dropChance: 1},
-				6: {item: IFAC.createItem(2), dropChance: 0.9}
+		0: {item: IFAC.createCoins('Silver', 1, 6), dropChance: 0.9},
+		1: {item: IFAC.createItem(2, 1), dropChance: 1}
 
     };
     Mob.call(this, gameState, id, spawn_x, spawn_y, 'Bat', exp, hp, speed, possibleLoot, mobWeapon);
@@ -100,11 +95,7 @@ function BigBat(gameState, id, spawn_x, spawn_y) {
 	var exp = 8500;
 	var mobWeapon = {type: enums.weaponType.MELEE, range: 1.5, damageMin: 7, damageMax: 35};
     var possibleLoot = {
-        0: {item: IFAC.createSkill(5), dropChance: 0.5},
-        1: {item: IFAC.createArmor(6), dropChance: 0.5},
-        2: {item: IFAC.createSkill(8), dropChance: 1},
-        3: {item: IFAC.createArmor(7), dropChance: 0.8},
-        4: {item: IFAC.createArmor(8), dropChance: 0.8}
+        0: {item: IFAC.createCoins('Gold', 1, 3), dropChance: 0.9}
     };
 
     Mob.call(this, gameState, id, spawn_x, spawn_y, 'Big Bat', exp, hp, speed, possibleLoot, mobWeapon);
@@ -113,15 +104,12 @@ BigBat.prototype = Object.create(Mob.prototype);
 BigBat.prototype.constructor = BigBat;
 
 function Ghoul(gameState, id, spawn_x, spawn_y) {
-	var hp = 100;
-	var speed = 800;
+	var hp = 1000;
+	var speed = 450;
 	var exp = 85000000;
-	var mobWeapon = {type: enums.weaponType.MELEE, range: 1.5, damageMin: 7, damageMax: 15};
+	var mobWeapon = {type: enums.weaponType.MELEE, range: 1.5, damageMin: 7, damageMax: 150};
     var possibleLoot = {
-        0: {item: IFAC.createWeapon(9), dropChance: 1},
-        1: {item: IFAC.createWeapon(5), dropChance: 0.1},
-        2: {item: IFAC.createGold(), dropChance: 0.6, maxQuantity: 40},
-        3: {item: IFAC.createItem(4), dropChance: 1} 
+        0: {item: IFAC.createCoins('Gold', 12, 150), dropChance: 0.75}
     };
 
   Mob.call(this, gameState, id, spawn_x, spawn_y, 'Ghoul', exp, hp, speed, possibleLoot, mobWeapon);
