@@ -284,7 +284,7 @@ module.exports = function Player(options) {
         }
     };
     this.attackRequest = function(target) {
-        if(!isDead && equipment.primary){
+        if( target && !isDead && equipment.primary){
             if(gameState.frameTime - lastAttack > equipment.primary.contents[0][0].attackCooldown / this._.attackSpeed && combatTools.dist(this.getData(), target.getData()) < equipment.primary.contents[0][0].range){
                 lastAttack = gameState.frameTime;
                 this.attack(target);
