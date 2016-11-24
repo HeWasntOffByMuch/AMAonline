@@ -38,7 +38,7 @@ module.exports = function Game() {
         totalMobs: 0,
         lastSave: new Date().getTime(),
         lastAutoLogoutCheck: new Date().getTime(),
-        globalSpawnPoint: {x: 43, y: 50},
+        globalSpawnPoint: {x: 51, y: 41},
         globalRespawnTime: 45 * 1000,
         defaultDecayTime: 180 * 1000,
         autoSaveTimer: 30 * 1000,

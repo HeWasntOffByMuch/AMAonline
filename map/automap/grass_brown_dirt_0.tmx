@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.0" orientation="orthogonal" renderorder="right-down" width="10" height="4" tilewidth="32" tileheight="32" nextobjectid="1">
+ <tileset firstgid="1" name="base" tilewidth="32" tileheight="32" tilecount="256" columns="16">
+  <image source="../../../AMAclient/img/tiles/base_tiles.png" width="512" height="512"/>
+ </tileset>
+ <layer name="regions" width="10" height="4">
+  <data encoding="csv">
+0,0,0,0,0,0,0,0,0,0,
+0,1,0,1,0,1,1,0,1,1,
+0,1,0,1,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0
+</data>
+ </layer>
+ <layer name="input_foreground" width="10" height="4">
+  <data encoding="csv">
+0,0,0,0,0,0,0,0,0,0,
+0,12,0,82,0,82,12,0,12,82,
+0,82,0,12,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0
+</data>
+ </layer>
+ <layer name="output_foreground" width="10" height="4">
+  <data encoding="csv">
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,42,0,27,0,0,0,25,
+0,10,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0
+</data>
+ </layer>
+</map>

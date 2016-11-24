@@ -208,7 +208,7 @@ function loadCollisions(fs, mapDetails, callback) {
             collisions[i][j] = 0;
         }
     }
-    fs.readFile('map/map_rework.json', 'utf-8', function(err, data) {
+    fs.readFile('map/automap/automap.json', 'utf-8', function(err, data) {
         if (err) callback(err, null);
         data = eval("(" + data + ")");
     	var data1 = data.layers[3]; // those u can shoot over. 0.5 value
